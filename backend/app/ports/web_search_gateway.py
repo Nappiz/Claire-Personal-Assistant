@@ -1,0 +1,6 @@
+from typing import Any, Protocol
+
+
+class WebSearchGateway(Protocol):
+    async def retrieve_web_context(self, *args: Any, **kwargs: Any) -> Any: ...
+    async def read_url(self, *args: Any, **kwargs: Any) -> Any: ...
