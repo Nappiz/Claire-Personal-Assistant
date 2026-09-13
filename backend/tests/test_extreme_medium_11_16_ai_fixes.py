@@ -360,7 +360,8 @@ class WebResilienceTests(IsolatedAsyncioTestCase):
         with patch.object(web_search_service, "retrieve_web_context", new=AsyncMock(side_effect=httpx.ConnectError("offline"))):
             events = await self.run_llm(client, context, user="Cari fakta terbaru")
         self.assertEqual("unavailable", context.web_context.status)
-        self.assertIn("tidak tersedia", next(event["delta"] for event in events if event["type"] == "delta"))
+        self.assertIn("tidak tersedia", "".join(
+            event["delta"] for event in events if event["type"] == "delta"))
 
     async def test_m15_greeting_streams_with_one_generation(self):
         client = _FakeLLMClient([])
@@ -375,7 +376,10 @@ class WebResilienceTests(IsolatedAsyncioTestCase):
         client = _FakeLLMClient([answer])
         events = await self.run_llm(client, MemoryContext(), user="Jelaskan konsep recursion")
         self.assertEqual(1, len(client.calls))
-        self.assertEqual(answer.choices[0].message.content, next(event["delta"] for event in events if event["type"] == "delta"))
+        deltas = [event["delta"] for event in events if event["type"] == "delta"]
+        self.assertGreater(len(deltas), 1)
+        self.assertTrue(client.calls[0]["stream"])
+        self.assertEqual(answer.choices[0].message.content, "".join(deltas))
         self.assertEqual(12, next(event["usage"]["total_tokens"] for event in events if event["type"] == "usage"))
 
     async def test_m15_greeting_with_fresh_fact_does_not_bypass_web_decision(self):

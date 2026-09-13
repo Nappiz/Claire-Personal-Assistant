@@ -164,7 +164,8 @@ class AnswerAndUsageTests(TemporaryDatabase, IsolatedAsyncioTestCase):
         client = _FakeLLMClient([response("Planner partial", reason="length")])
         events = await self.run_generation(client, user="Jelaskan recursion")
         self.assertEqual(1, len(client.calls))
-        self.assertEqual("Planner partial", next(event["delta"] for event in events if event["type"] == "delta"))
+        self.assertEqual("Planner partial", "".join(
+            event["delta"] for event in events if event["type"] == "delta"))
         self.assertEqual("incomplete", next(event["response_status"] for event in events if event["type"] == "completion"))
 
     async def test_m17_ambiguous_reference_clarifies_without_answer_generation(self):

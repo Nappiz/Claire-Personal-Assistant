@@ -1,10 +1,12 @@
 from __future__ import annotations
 import asyncio
 import logging
+from contextlib import aclosing
 from typing import Any
 from schemas.chat_sch import WebPageContent, WebSearchContext
 from app.domain.diagnostics import InternalFeatureError
-from app.domain.llm.tool_contracts import WEB_TOOL_DEFINITIONS
+from app.domain.llm.planning_stream import PlanningStreamResult
+from app.application.chat.stream_planning_response import stream_planning_response
 logger = logging.getLogger("services.llm_service")
 
 from dataclasses import dataclass
@@ -32,28 +34,20 @@ class ToolLoopState:
     planning_timeout: Any
     base_message_count: Any
     web_tools_allowed: Any
+    planning_text_emitted: bool = False
 
 class ExecuteWebToolLoop:
     async def execute_web_tool_loop(self, state: ToolLoopState):
         web_reader_service = web_search_service = self.web
         try:
             for _ in range(state.max_rounds):
-                async with asyncio.timeout(state.planning_timeout):
-                    planning_response, invocation_id = await self.gateway.tracked_async_completion(
-                        state.client, purpose="chat_planning", provider=state.provider,
-                        model=state.model_name,
-                        messages=state.llm_messages,
-                        temperature=0.0,
-                        max_tokens=self.config.CHAT_OUTPUT_MAX_TOKENS,
-                        tools=WEB_TOOL_DEFINITIONS,
-                        tool_choice="auto",
-                    )
-                self.responses.add_usage(state.total_usage, getattr(planning_response, "usage", None), invocation_id)
-                choices = getattr(planning_response, "choices", None) or []
-                if not choices:
+                planning_message = PlanningStreamResult()
+                async with aclosing(stream_planning_response(self, state, planning_message)) as planning:
+                    async for event in planning:
+                        yield event
+                if not planning_message.has_choice:
                     break
 
-                planning_message = choices[0].message
                 tool_calls = list(getattr(planning_message, "tool_calls", None) or [])
                 if not tool_calls:
                     # This response is already the answer, not a discarded
@@ -62,7 +56,9 @@ class ExecuteWebToolLoop:
                     if (isinstance(content, str) and content.strip()
                             and not getattr(planning_message, "refusal", None)):
                         state.direct_answer = content
-                        state.direct_finish_reason = self.responses.finish_reason_text(getattr(choices[0], "finish_reason", None)) or None
+                        state.direct_finish_reason = planning_message.finish_reason
+                    elif state.planning_text_emitted:
+                        raise RuntimeError("Planner stream ended without a valid direct answer")
                     break
 
                 state.llm_messages.append(
@@ -214,6 +210,10 @@ class ExecuteWebToolLoop:
         except InternalFeatureError:
             raise
         except Exception as exc:
+            if state.planning_text_emitted:
+                # Once visible text has reached the user, never concatenate
+                # a fallback generation onto a partially delivered answer.
+                raise
             logger.warning("LLM web-tool planning failed; using explicit fallback: %s", exc)
             # A provider may reject its own tool history (for example, if an
             # OpenAI-compatible gateway omits required proprietary metadata).

@@ -29,9 +29,9 @@ def _planning_response(*tool_calls):
 
 
 class _FakeStream:
-    def __init__(self):
+    def __init__(self, chunks=None):
         self._chunks = iter(
-            [
+            chunks if chunks is not None else [
                 SimpleNamespace(
                     choices=[SimpleNamespace(delta=SimpleNamespace(content="Jawaban final"))],
                     usage=None,
@@ -120,15 +120,50 @@ class _FakeLLMClient:
 
     async def create(self, **kwargs):
         self.calls.append(kwargs)
-        if kwargs.get("stream"):
+        if kwargs.get("stream") and not kwargs.get("tools"):
             return next(self.stream_responses, None) or _FakeStream()
         response = next(self.planning_responses)
         if isinstance(response, BaseException):
             raise response
+        if kwargs.get("stream"):
+            return _planning_stream(response)
         return response
 
     async def close(self):
         self.closed = True
+
+
+def _planning_stream(response):
+    """Return real delta-shaped fragments for the planner, not a full message."""
+    chunks = []
+    choices = response.choices
+    if choices:
+        message = choices[0].message
+        content = message.content or ""
+        midpoint = max(1, len(content) // 2)
+        for text in (content[:midpoint], content[midpoint:]):
+            if text:
+                chunks.append(SimpleNamespace(choices=[SimpleNamespace(
+                    delta=SimpleNamespace(content=text), finish_reason=None)], usage=None))
+        calls = list(getattr(message, "tool_calls", None) or [])
+        for index, call in enumerate(calls):
+            arguments = call.function.arguments
+            midpoint = max(1, len(arguments) // 2)
+            for offset, arguments_part in enumerate((arguments[:midpoint], arguments[midpoint:])):
+                fragment = SimpleNamespace(
+                    index=index, id=call.id if offset == 0 else None, type="function",
+                    function=SimpleNamespace(
+                        name=call.function.name if offset == 0 else None,
+                        arguments=arguments_part),
+                    extra_content=getattr(call, "extra_content", None) if offset == 1 else None)
+                chunks.append(SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(
+                    content=None, tool_calls=[fragment]), finish_reason=None)], usage=None))
+        chunks.append(SimpleNamespace(choices=[SimpleNamespace(delta=SimpleNamespace(
+            content=None, refusal=getattr(message, "refusal", None)),
+            finish_reason=getattr(choices[0], "finish_reason", None) or
+                          ("tool_calls" if calls else "stop"))], usage=None))
+    chunks.append(SimpleNamespace(choices=[], usage=response.usage))
+    return _FakeStream(chunks)
 
 
 async def _search_context(*_args, **_kwargs):
@@ -254,8 +289,8 @@ class LLMWebToolLoopTests(IsolatedAsyncioTestCase):
         self.assertEqual(1, len(context.web_context.pages))
         self.assertTrue(fake_client.closed)
         self.assertEqual(3, len(fake_client.calls))
-        self.assertFalse(fake_client.calls[0].get("stream", False))
-        self.assertFalse(fake_client.calls[1].get("stream", False))
+        self.assertTrue(fake_client.calls[0]["stream"])
+        self.assertTrue(fake_client.calls[1]["stream"])
         self.assertTrue(fake_client.calls[2]["stream"])
         self.assertNotIn("tools", fake_client.calls[2])
         self.assertNotIn("tool_choice", fake_client.calls[2])

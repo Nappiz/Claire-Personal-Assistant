@@ -125,7 +125,7 @@ FINAL RESPONSE PHASE:
 """
 
             if direct_answer is not None:
-                yield {"type": "delta", "delta": direct_answer}
+                # The planner's provider deltas were already forwarded above.
                 if total_usage:
                     yield {"type": "usage", "usage": dict(total_usage)}
                 yield self.responses.completion_outcome({"finish_reasons": [direct_finish_reason] if direct_finish_reason else []})
