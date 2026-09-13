@@ -1,7 +1,7 @@
 """Migration adapters. LLM/memory algorithms remain unchanged until stages 5â€“6."""
 from services import memory_service, llm_service
 from app.infrastructure.vector.qdrant_vector_store import vector_store
-from services.neo4j_service import neo4j_client
+from app.infrastructure.graph.neo4j_graph_store import graph_store
 from services.ai_usage_service import set_usage_context as legacy_set_usage_context, reset_usage_context as legacy_reset_usage_context
 from app.observability.correlation import correlation
 
@@ -36,7 +36,6 @@ class LegacyMemoryWorkflow:
 
 
 llm_gateway = LegacyLLMGateway()
-graph_store = neo4j_client
 
 
 def set_usage_context(**values):

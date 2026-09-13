@@ -1,0 +1,696 @@
+{
+  "scoped_merge": {
+    "calls": [
+      {
+        "query": "MERGE (p:Entity:Project {entity_key: $entity_key}) ON CREATE SET p.created_at = timestamp(), p.importance = 1.0 SET p.name = $name, p.display_name = $display_name, p.project_id = $project_id, p.updated_at = timestamp()",
+        "parameters": {
+          "entity_key": "project:project:fixture",
+          "name": "claire",
+          "display_name": "Claire",
+          "project_id": "project:fixture"
+        }
+      },
+      {
+        "query": "MERGE (n:Entity {entity_key: $entity_key}) ON CREATE SET n.created_at = timestamp(), n.importance = 1.0, n.source_conversation_id = $source_conversation_id, n.source_message_id = $source_message_id SET n:Person, n.name = $name, n.display_name = $name, n.identity_context = $identity_context, n.identity_signature = $identity_signature, n.identity_aliases = CASE WHEN $identity_context IS NULL OR $identity_context IN coalesce(n.identity_aliases, []) THEN coalesce(n.identity_aliases, []) ELSE coalesce(n.identity_aliases, []) + [$identity_context] END, n.updated_at = timestamp(), n.importance = CASE WHEN ($source_message_id IS NOT NULL AND $source_message_id IN coalesce(n.source_message_ids, [])) OR ($source_message_id IS NULL AND n.last_applied_event_id = $event_id) OR $event_at < coalesce(n.latest_event_at, 0) THEN coalesce(n.importance, 1.0) ELSE coalesce(n.importance, 1.0) + 0.5 END, n.last_applied_event_id = $event_id, n.latest_event_at = CASE WHEN $event_at >= coalesce(n.latest_event_at, 0) THEN $event_at ELSE n.latest_event_at END, n.source_conversation_id = coalesce(n.source_conversation_id, $source_conversation_id), n.source_message_id = coalesce(n.source_message_id, $source_message_id), n.last_source_conversation_id = coalesce($source_conversation_id, n.last_source_conversation_id), n.last_source_message_id = coalesce($source_message_id, n.last_source_message_id), n.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(n.source_conversation_ids, []) THEN coalesce(n.source_conversation_ids, []) ELSE coalesce(n.source_conversation_ids, []) + [$source_conversation_id] END, n.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(n.source_message_ids, []) THEN coalesce(n.source_message_ids, []) ELSE coalesce(n.source_message_ids, []) + [$source_message_id] END",
+        "parameters": {
+          "entity_key": "person:nafiz",
+          "name": "nafiz",
+          "identity_context": null,
+          "identity_signature": null,
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture",
+          "event_id": "event:fixture",
+          "event_at": 1789257600000
+        }
+      },
+      {
+        "query": "MATCH (n:Entity {entity_key: $entity_key}) MATCH (p:Entity:Project {entity_key: $project_entity_key}) MERGE (n)-[r:BELONGS_TO {scope_key: $scope_key}]->(p) ON CREATE SET r.fact_id = randomUUID(), r.created_at = timestamp() SET r.is_current = true, r.review_status = 'approved', r.memory_kind = 'scope', r.project_id = $project_id, r.scope = 'project', r.updated_at = timestamp(), r.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(r.source_conversation_ids, []) THEN coalesce(r.source_conversation_ids, []) ELSE coalesce(r.source_conversation_ids, []) + [$source_conversation_id] END, r.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(r.source_message_ids, []) THEN coalesce(r.source_message_ids, []) ELSE coalesce(r.source_message_ids, []) + [$source_message_id] END",
+        "parameters": {
+          "entity_key": "person:nafiz",
+          "project_entity_key": "project:project:fixture",
+          "scope_key": "project:fixture",
+          "project_id": "project:fixture",
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture"
+        }
+      },
+      {
+        "query": "MERGE (n:Entity {entity_key: $entity_key}) ON CREATE SET n.created_at = timestamp(), n.importance = 1.0, n.source_conversation_id = $source_conversation_id, n.source_message_id = $source_message_id SET n:Location, n.name = $name, n.display_name = $name, n.identity_context = $identity_context, n.identity_signature = $identity_signature, n.identity_aliases = CASE WHEN $identity_context IS NULL OR $identity_context IN coalesce(n.identity_aliases, []) THEN coalesce(n.identity_aliases, []) ELSE coalesce(n.identity_aliases, []) + [$identity_context] END, n.updated_at = timestamp(), n.importance = CASE WHEN ($source_message_id IS NOT NULL AND $source_message_id IN coalesce(n.source_message_ids, [])) OR ($source_message_id IS NULL AND n.last_applied_event_id = $event_id) OR $event_at < coalesce(n.latest_event_at, 0) THEN coalesce(n.importance, 1.0) ELSE coalesce(n.importance, 1.0) + 0.5 END, n.last_applied_event_id = $event_id, n.latest_event_at = CASE WHEN $event_at >= coalesce(n.latest_event_at, 0) THEN $event_at ELSE n.latest_event_at END, n.source_conversation_id = coalesce(n.source_conversation_id, $source_conversation_id), n.source_message_id = coalesce(n.source_message_id, $source_message_id), n.last_source_conversation_id = coalesce($source_conversation_id, n.last_source_conversation_id), n.last_source_message_id = coalesce($source_message_id, n.last_source_message_id), n.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(n.source_conversation_ids, []) THEN coalesce(n.source_conversation_ids, []) ELSE coalesce(n.source_conversation_ids, []) + [$source_conversation_id] END, n.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(n.source_message_ids, []) THEN coalesce(n.source_message_ids, []) ELSE coalesce(n.source_message_ids, []) + [$source_message_id] END",
+        "parameters": {
+          "entity_key": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "name": "surabaya",
+          "identity_context": null,
+          "identity_signature": null,
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture",
+          "event_id": "event:fixture",
+          "event_at": 1789257600000
+        }
+      },
+      {
+        "query": "MATCH (n:Entity {entity_key: $entity_key}) MATCH (p:Entity:Project {entity_key: $project_entity_key}) MERGE (n)-[r:BELONGS_TO {scope_key: $scope_key}]->(p) ON CREATE SET r.fact_id = randomUUID(), r.created_at = timestamp() SET r.is_current = true, r.review_status = 'approved', r.memory_kind = 'scope', r.project_id = $project_id, r.scope = 'project', r.updated_at = timestamp(), r.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(r.source_conversation_ids, []) THEN coalesce(r.source_conversation_ids, []) ELSE coalesce(r.source_conversation_ids, []) + [$source_conversation_id] END, r.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(r.source_message_ids, []) THEN coalesce(r.source_message_ids, []) ELSE coalesce(r.source_message_ids, []) + [$source_message_id] END",
+        "parameters": {
+          "entity_key": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "project_entity_key": "project:project:fixture",
+          "scope_key": "project:fixture",
+          "project_id": "project:fixture",
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture"
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source}) SET a.memory_write_fence = $event_id",
+        "parameters": {
+          "source": "person:nafiz",
+          "event_id": "event:fixture"
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source})-[old:BORN_IN]->(other:Entity) WHERE other.entity_key <> $target AND coalesce(old.scope_key, 'global') = $scope_key AND coalesce(old.is_current, true) = true AND coalesce(old.review_status, 'approved') = 'approved' AND (old.expires_at IS NULL OR old.expires_at > timestamp()) RETURN collect(old.fact_id) AS fact_ids, coalesce(max(CASE WHEN coalesce(old.lifecycle_event_at, 0) > coalesce(old.source_event_at, 0) THEN old.lifecycle_event_at ELSE coalesce(old.source_event_at, 0) END), 0) AS newest_event_at",
+        "parameters": {
+          "source": "person:nafiz",
+          "target": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "scope_key": "project:fixture"
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source}) MATCH (b:Entity {entity_key: $target}) MERGE (a)-[r:BORN_IN {scope_key: $scope_key}]->(b) ON CREATE SET r.fact_id = $fact_id, r.created_at = timestamp(), r.source_event_at = $event_at, r.source_conversation_id = $source_conversation_id, r.source_message_id = $source_message_id WITH a, b, r, NOT ( ($source_message_id IS NOT NULL AND $source_message_id IN coalesce(r.source_message_ids, [])) OR ($source_message_id IS NULL AND r.last_applied_event_id = $event_id) ) AS new_event, $event_at >= CASE WHEN coalesce(r.lifecycle_event_at, 0) > coalesce(r.source_event_at, 0) THEN r.lifecycle_event_at ELSE coalesce(r.source_event_at, 0) END AS newest_event SET r.fact_id = coalesce(r.fact_id, $fact_id), r.is_current = CASE WHEN newest_event THEN $approve_new_fact ELSE coalesce(r.is_current, true) END, r.review_status = CASE WHEN newest_event THEN $review_status ELSE coalesce(r.review_status, 'approved') END, r.confidence = CASE WHEN newest_event THEN $confidence ELSE coalesce(r.confidence, $confidence) END, r.memory_kind = coalesce(r.memory_kind, $memory_kind), r.observed_at = coalesce(r.observed_at, $event_at), r.valid_from = coalesce(r.valid_from, $event_at), r.expires_at = CASE WHEN newest_event AND $approve_new_fact AND $ttl_ms IS NOT NULL THEN $event_at + $ttl_ms ELSE r.expires_at END, r.last_confirmed_at = CASE WHEN newest_event AND $approve_new_fact THEN $event_at ELSE coalesce(r.last_confirmed_at, r.created_at) END, r.updated_at = timestamp(), r.scope = $scope, r.project_id = $project_id, r.source_event_at = CASE WHEN newest_event THEN $event_at ELSE r.source_event_at END, r.importance = CASE WHEN new_event AND newest_event AND $approve_new_fact THEN coalesce(r.importance, 1.0) + 0.5 ELSE coalesce(r.importance, 1.0) END, r.last_applied_event_id = $event_id, r.superseded_at = CASE WHEN newest_event AND $approve_new_fact THEN null ELSE r.superseded_at END, r.superseded_by = CASE WHEN newest_event AND $approve_new_fact THEN null ELSE r.superseded_by END, r.source_conversation_id = coalesce(r.source_conversation_id, $source_conversation_id), r.source_message_id = coalesce(r.source_message_id, $source_message_id), r.last_source_conversation_id = coalesce($source_conversation_id, r.last_source_conversation_id), r.last_source_message_id = coalesce($source_message_id, r.last_source_message_id), r.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(r.source_conversation_ids, []) THEN coalesce(r.source_conversation_ids, []) ELSE coalesce(r.source_conversation_ids, []) + [$source_conversation_id] END, r.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(r.source_message_ids, []) THEN coalesce(r.source_message_ids, []) ELSE coalesce(r.source_message_ids, []) + [$source_message_id] END, a.importance = CASE WHEN new_event AND newest_event AND $approve_new_fact THEN coalesce(a.importance, 1.0) + 0.1 ELSE coalesce(a.importance, 1.0) END, b.importance = CASE WHEN new_event AND newest_event AND $approve_new_fact THEN coalesce(b.importance, 1.0) + 0.1 ELSE coalesce(b.importance, 1.0) END RETURN r.fact_id AS fact_id",
+        "parameters": {
+          "source": "person:nafiz",
+          "target": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "fact_id": "04b9c654-1d3f-466f-a51e-32bfbb3c86bb",
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture",
+          "approve_new_fact": true,
+          "review_status": "approved",
+          "confidence": 1.0,
+          "memory_kind": "fact",
+          "ttl_ms": null,
+          "scope_key": "project:fixture",
+          "scope": "project",
+          "project_id": "project:fixture",
+          "event_id": "event:fixture",
+          "event_at": 1789257600000
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source})-[old:BORN_IN]->() WHERE old.fact_id IN $old_fact_ids AND coalesce(old.scope_key, 'global') = $scope_key AND coalesce(old.is_current, true) = true AND CASE WHEN coalesce(old.lifecycle_event_at, 0) > coalesce(old.source_event_at, 0) THEN old.lifecycle_event_at ELSE coalesce(old.source_event_at, 0) END <= $event_at SET old.is_current = false, old.superseded_at = $event_at, old.superseded_by = $new_fact_id, old.lifecycle_event_at = $event_at, old.updated_at = timestamp() RETURN coalesce(old.source_message_ids, []) + CASE WHEN old.source_message_id IS NULL THEN [] ELSE [old.source_message_id] END AS source_message_ids",
+        "parameters": {
+          "source": "person:nafiz",
+          "old_fact_ids": [
+            "fact:old"
+          ],
+          "new_fact_id": "fact:new",
+          "scope_key": "project:fixture",
+          "event_at": 1789257600000
+        }
+      }
+    ],
+    "transactions": 1,
+    "result": {
+      "invalidated_source_message_ids": [
+        "message:old"
+      ]
+    }
+  },
+  "explicit_retraction": {
+    "calls": [
+      {
+        "query": "MERGE (p:Entity:Project {entity_key: $entity_key}) ON CREATE SET p.created_at = timestamp(), p.importance = 1.0 SET p.name = $name, p.display_name = $display_name, p.project_id = $project_id, p.updated_at = timestamp()",
+        "parameters": {
+          "entity_key": "project:project:fixture",
+          "name": "claire",
+          "display_name": "Claire",
+          "project_id": "project:fixture"
+        }
+      },
+      {
+        "query": "MERGE (n:Entity {entity_key: $entity_key}) ON CREATE SET n.created_at = timestamp(), n.importance = 1.0, n.source_conversation_id = $source_conversation_id, n.source_message_id = $source_message_id SET n:Person, n.name = $name, n.display_name = $name, n.identity_context = $identity_context, n.identity_signature = $identity_signature, n.identity_aliases = CASE WHEN $identity_context IS NULL OR $identity_context IN coalesce(n.identity_aliases, []) THEN coalesce(n.identity_aliases, []) ELSE coalesce(n.identity_aliases, []) + [$identity_context] END, n.updated_at = timestamp(), n.importance = CASE WHEN ($source_message_id IS NOT NULL AND $source_message_id IN coalesce(n.source_message_ids, [])) OR ($source_message_id IS NULL AND n.last_applied_event_id = $event_id) OR $event_at < coalesce(n.latest_event_at, 0) THEN coalesce(n.importance, 1.0) ELSE coalesce(n.importance, 1.0) + 0.5 END, n.last_applied_event_id = $event_id, n.latest_event_at = CASE WHEN $event_at >= coalesce(n.latest_event_at, 0) THEN $event_at ELSE n.latest_event_at END, n.source_conversation_id = coalesce(n.source_conversation_id, $source_conversation_id), n.source_message_id = coalesce(n.source_message_id, $source_message_id), n.last_source_conversation_id = coalesce($source_conversation_id, n.last_source_conversation_id), n.last_source_message_id = coalesce($source_message_id, n.last_source_message_id), n.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(n.source_conversation_ids, []) THEN coalesce(n.source_conversation_ids, []) ELSE coalesce(n.source_conversation_ids, []) + [$source_conversation_id] END, n.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(n.source_message_ids, []) THEN coalesce(n.source_message_ids, []) ELSE coalesce(n.source_message_ids, []) + [$source_message_id] END",
+        "parameters": {
+          "entity_key": "person:nafiz",
+          "name": "nafiz",
+          "identity_context": null,
+          "identity_signature": null,
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture",
+          "event_id": "event:fixture",
+          "event_at": 1789257600000
+        }
+      },
+      {
+        "query": "MATCH (n:Entity {entity_key: $entity_key}) MATCH (p:Entity:Project {entity_key: $project_entity_key}) MERGE (n)-[r:BELONGS_TO {scope_key: $scope_key}]->(p) ON CREATE SET r.fact_id = randomUUID(), r.created_at = timestamp() SET r.is_current = true, r.review_status = 'approved', r.memory_kind = 'scope', r.project_id = $project_id, r.scope = 'project', r.updated_at = timestamp(), r.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(r.source_conversation_ids, []) THEN coalesce(r.source_conversation_ids, []) ELSE coalesce(r.source_conversation_ids, []) + [$source_conversation_id] END, r.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(r.source_message_ids, []) THEN coalesce(r.source_message_ids, []) ELSE coalesce(r.source_message_ids, []) + [$source_message_id] END",
+        "parameters": {
+          "entity_key": "person:nafiz",
+          "project_entity_key": "project:project:fixture",
+          "scope_key": "project:fixture",
+          "project_id": "project:fixture",
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture"
+        }
+      },
+      {
+        "query": "MERGE (n:Entity {entity_key: $entity_key}) ON CREATE SET n.created_at = timestamp(), n.importance = 1.0, n.source_conversation_id = $source_conversation_id, n.source_message_id = $source_message_id SET n:Location, n.name = $name, n.display_name = $name, n.identity_context = $identity_context, n.identity_signature = $identity_signature, n.identity_aliases = CASE WHEN $identity_context IS NULL OR $identity_context IN coalesce(n.identity_aliases, []) THEN coalesce(n.identity_aliases, []) ELSE coalesce(n.identity_aliases, []) + [$identity_context] END, n.updated_at = timestamp(), n.importance = CASE WHEN ($source_message_id IS NOT NULL AND $source_message_id IN coalesce(n.source_message_ids, [])) OR ($source_message_id IS NULL AND n.last_applied_event_id = $event_id) OR $event_at < coalesce(n.latest_event_at, 0) THEN coalesce(n.importance, 1.0) ELSE coalesce(n.importance, 1.0) + 0.5 END, n.last_applied_event_id = $event_id, n.latest_event_at = CASE WHEN $event_at >= coalesce(n.latest_event_at, 0) THEN $event_at ELSE n.latest_event_at END, n.source_conversation_id = coalesce(n.source_conversation_id, $source_conversation_id), n.source_message_id = coalesce(n.source_message_id, $source_message_id), n.last_source_conversation_id = coalesce($source_conversation_id, n.last_source_conversation_id), n.last_source_message_id = coalesce($source_message_id, n.last_source_message_id), n.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(n.source_conversation_ids, []) THEN coalesce(n.source_conversation_ids, []) ELSE coalesce(n.source_conversation_ids, []) + [$source_conversation_id] END, n.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(n.source_message_ids, []) THEN coalesce(n.source_message_ids, []) ELSE coalesce(n.source_message_ids, []) + [$source_message_id] END",
+        "parameters": {
+          "entity_key": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "name": "surabaya",
+          "identity_context": null,
+          "identity_signature": null,
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture",
+          "event_id": "event:fixture",
+          "event_at": 1789257600000
+        }
+      },
+      {
+        "query": "MATCH (n:Entity {entity_key: $entity_key}) MATCH (p:Entity:Project {entity_key: $project_entity_key}) MERGE (n)-[r:BELONGS_TO {scope_key: $scope_key}]->(p) ON CREATE SET r.fact_id = randomUUID(), r.created_at = timestamp() SET r.is_current = true, r.review_status = 'approved', r.memory_kind = 'scope', r.project_id = $project_id, r.scope = 'project', r.updated_at = timestamp(), r.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(r.source_conversation_ids, []) THEN coalesce(r.source_conversation_ids, []) ELSE coalesce(r.source_conversation_ids, []) + [$source_conversation_id] END, r.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(r.source_message_ids, []) THEN coalesce(r.source_message_ids, []) ELSE coalesce(r.source_message_ids, []) + [$source_message_id] END",
+        "parameters": {
+          "entity_key": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "project_entity_key": "project:project:fixture",
+          "scope_key": "project:fixture",
+          "project_id": "project:fixture",
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture"
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source}) SET a.memory_write_fence = $event_id",
+        "parameters": {
+          "source": "person:nafiz",
+          "event_id": "event:fixture"
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source})-[old:BORN_IN]->(other:Entity) WHERE other.entity_key <> $target AND coalesce(old.scope_key, 'global') = $scope_key AND coalesce(old.is_current, true) = true AND coalesce(old.review_status, 'approved') = 'approved' AND (old.expires_at IS NULL OR old.expires_at > timestamp()) RETURN collect(old.fact_id) AS fact_ids, coalesce(max(CASE WHEN coalesce(old.lifecycle_event_at, 0) > coalesce(old.source_event_at, 0) THEN old.lifecycle_event_at ELSE coalesce(old.source_event_at, 0) END), 0) AS newest_event_at",
+        "parameters": {
+          "source": "person:nafiz",
+          "target": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "scope_key": "project:fixture"
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source}) MATCH (b:Entity {entity_key: $target}) MERGE (a)-[r:BORN_IN {scope_key: $scope_key}]->(b) ON CREATE SET r.fact_id = $fact_id, r.created_at = timestamp(), r.source_event_at = $event_at, r.source_conversation_id = $source_conversation_id, r.source_message_id = $source_message_id WITH a, b, r, NOT ( ($source_message_id IS NOT NULL AND $source_message_id IN coalesce(r.source_message_ids, [])) OR ($source_message_id IS NULL AND r.last_applied_event_id = $event_id) ) AS new_event, $event_at >= CASE WHEN coalesce(r.lifecycle_event_at, 0) > coalesce(r.source_event_at, 0) THEN r.lifecycle_event_at ELSE coalesce(r.source_event_at, 0) END AS newest_event SET r.fact_id = coalesce(r.fact_id, $fact_id), r.is_current = CASE WHEN newest_event THEN $approve_new_fact ELSE coalesce(r.is_current, true) END, r.review_status = CASE WHEN newest_event THEN $review_status ELSE coalesce(r.review_status, 'approved') END, r.confidence = CASE WHEN newest_event THEN $confidence ELSE coalesce(r.confidence, $confidence) END, r.memory_kind = coalesce(r.memory_kind, $memory_kind), r.observed_at = coalesce(r.observed_at, $event_at), r.valid_from = coalesce(r.valid_from, $event_at), r.expires_at = CASE WHEN newest_event AND $approve_new_fact AND $ttl_ms IS NOT NULL THEN $event_at + $ttl_ms ELSE r.expires_at END, r.last_confirmed_at = CASE WHEN newest_event AND $approve_new_fact THEN $event_at ELSE coalesce(r.last_confirmed_at, r.created_at) END, r.updated_at = timestamp(), r.scope = $scope, r.project_id = $project_id, r.source_event_at = CASE WHEN newest_event THEN $event_at ELSE r.source_event_at END, r.importance = CASE WHEN new_event AND newest_event AND $approve_new_fact THEN coalesce(r.importance, 1.0) + 0.5 ELSE coalesce(r.importance, 1.0) END, r.last_applied_event_id = $event_id, r.superseded_at = CASE WHEN newest_event AND $approve_new_fact THEN null ELSE r.superseded_at END, r.superseded_by = CASE WHEN newest_event AND $approve_new_fact THEN null ELSE r.superseded_by END, r.source_conversation_id = coalesce(r.source_conversation_id, $source_conversation_id), r.source_message_id = coalesce(r.source_message_id, $source_message_id), r.last_source_conversation_id = coalesce($source_conversation_id, r.last_source_conversation_id), r.last_source_message_id = coalesce($source_message_id, r.last_source_message_id), r.source_conversation_ids = CASE WHEN $source_conversation_id IS NULL OR $source_conversation_id IN coalesce(r.source_conversation_ids, []) THEN coalesce(r.source_conversation_ids, []) ELSE coalesce(r.source_conversation_ids, []) + [$source_conversation_id] END, r.source_message_ids = CASE WHEN $source_message_id IS NULL OR $source_message_id IN coalesce(r.source_message_ids, []) THEN coalesce(r.source_message_ids, []) ELSE coalesce(r.source_message_ids, []) + [$source_message_id] END, a.importance = CASE WHEN new_event AND newest_event AND $approve_new_fact THEN coalesce(a.importance, 1.0) + 0.1 ELSE coalesce(a.importance, 1.0) END, b.importance = CASE WHEN new_event AND newest_event AND $approve_new_fact THEN coalesce(b.importance, 1.0) + 0.1 ELSE coalesce(b.importance, 1.0) END RETURN r.fact_id AS fact_id",
+        "parameters": {
+          "source": "person:nafiz",
+          "target": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "fact_id": "04b9c654-1d3f-466f-a51e-32bfbb3c86bb",
+          "source_conversation_id": "conversation:fixture",
+          "source_message_id": "message:fixture",
+          "approve_new_fact": true,
+          "review_status": "approved",
+          "confidence": 1.0,
+          "memory_kind": "fact",
+          "ttl_ms": null,
+          "scope_key": "project:fixture",
+          "scope": "project",
+          "project_id": "project:fixture",
+          "event_id": "event:fixture",
+          "event_at": 1789257600000
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source})-[old:BORN_IN]->() WHERE old.fact_id IN $old_fact_ids AND coalesce(old.scope_key, 'global') = $scope_key AND coalesce(old.is_current, true) = true AND CASE WHEN coalesce(old.lifecycle_event_at, 0) > coalesce(old.source_event_at, 0) THEN old.lifecycle_event_at ELSE coalesce(old.source_event_at, 0) END <= $event_at SET old.is_current = false, old.superseded_at = $event_at, old.superseded_by = $new_fact_id, old.lifecycle_event_at = $event_at, old.updated_at = timestamp() RETURN coalesce(old.source_message_ids, []) + CASE WHEN old.source_message_id IS NULL THEN [] ELSE [old.source_message_id] END AS source_message_ids",
+        "parameters": {
+          "source": "person:nafiz",
+          "old_fact_ids": [
+            "fact:old"
+          ],
+          "new_fact_id": "fact:new",
+          "scope_key": "project:fixture",
+          "event_at": 1789257600000
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source}) SET a.memory_write_fence = $event_id",
+        "parameters": {
+          "source": "person:nafiz",
+          "event_id": "event:fixture"
+        }
+      },
+      {
+        "query": "MERGE (m:ResidenceRetraction {marker_key: $marker_key}) ON CREATE SET m.created_at = timestamp() SET m.source_key = $source, m.target_key = $target, m.scope_key = $scope_key, m.event_id = CASE WHEN $event_at >= coalesce(m.event_at, 0) THEN $event_id ELSE m.event_id END, m.event_at = CASE WHEN $event_at >= coalesce(m.event_at, 0) THEN $event_at ELSE m.event_at END, m.updated_at = timestamp()",
+        "parameters": {
+          "marker_key": "fa7790ed5041415d1e70c5325af58f3ff4985c6cc40d00a438b0d0e43eb050b9",
+          "source": "person:nafiz",
+          "target": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "scope_key": "project:fixture",
+          "event_at": 1789257600000,
+          "event_id": "event:fixture"
+        }
+      },
+      {
+        "query": "MATCH (a:Entity {entity_key: $source})-[old:LIVES_IN]->(b:Entity) WHERE coalesce(old.scope_key, 'global') = $scope_key AND coalesce(old.is_current, true) = true AND CASE WHEN coalesce(old.lifecycle_event_at, 0) > coalesce(old.source_event_at, 0) THEN old.lifecycle_event_at ELSE coalesce(old.source_event_at, 0) END <= $event_at AND ($fact_id IS NULL OR old.fact_id = $fact_id) AND ($target IS NULL OR b.entity_key = $target) SET old.is_current = false, old.retracted_at = $event_at, old.retracted_by_event_id = $event_id, old.lifecycle_event_at = $event_at, old.updated_at = timestamp() RETURN coalesce(old.source_message_ids, []) + CASE WHEN old.source_message_id IS NULL THEN [] ELSE [old.source_message_id] END AS source_message_ids",
+        "parameters": {
+          "source": "person:nafiz",
+          "target": "location:e7b89204bf58532725998c94baa2e58e4eb36b66805f3032fe0815c958878f3f",
+          "fact_id": null,
+          "scope_key": "project:fixture",
+          "event_at": 1789257600000,
+          "event_id": "event:fixture"
+        }
+      }
+    ],
+    "transactions": 1,
+    "result": {
+      "invalidated_source_message_ids": [
+        "message:old"
+      ]
+    }
+  },
+  "ambiguous_identity": {
+    "calls": [
+      {
+        "query": "MERGE (i:EntityIdentity {identity_key: $identity_key}) ON CREATE SET i.name = $name, i.canonical_context = $identity_signature, i.created_at = timestamp() SET i.write_fence = $event_id, i.updated_at = timestamp() WITH i OPTIONAL MATCH (i)-[:RESOLVES_TO]->(person:Entity:Person) RETURN collect(person.entity_key) AS linked_keys",
+        "parameters": {
+          "identity_key": "person:76fe13f13d00d3d62210a5d0d040b9439152a3a8dfd9947c3af514727a2fcaa9",
+          "name": "adel",
+          "identity_signature": "teman nafiz",
+          "event_id": "event:fixture"
+        }
+      },
+      {
+        "query": "MATCH (i:EntityIdentity {identity_key: $identity_key}) SET i.review_status = 'pending_ambiguous', i.candidate_entity_keys = $candidate_keys",
+        "parameters": {
+          "identity_key": "person:76fe13f13d00d3d62210a5d0d040b9439152a3a8dfd9947c3af514727a2fcaa9",
+          "candidate_keys": [
+            "person:a",
+            "person:b"
+          ]
+        }
+      }
+    ],
+    "transactions": 1,
+    "result": {
+      "invalidated_source_message_ids": [
+        "message:fixture"
+      ]
+    }
+  },
+  "graph_read": {
+    "calls": [
+      {
+        "query": "MATCH (n:Entity)-[r]->(m:Entity) WHERE $include_inactive OR ( coalesce(r.is_current, true) = true AND coalesce(r.review_status, 'approved') = 'approved' AND (r.expires_at IS NULL OR r.expires_at > timestamp()) ) RETURN id(n) AS source_id, n.entity_key AS source_key, n.name AS source_name, n.identity_context AS source_identity_context, labels(n) AS source_labels, coalesce(n.importance, 1.0) AS source_importance, n.source_conversation_id AS source_node_conversation_id, n.source_message_id AS source_node_message_id, n.source_conversation_ids AS source_node_conversation_ids, n.source_message_ids AS source_node_message_ids, type(r) AS rel_type, r.fact_id AS fact_id, coalesce(r.is_current, true) AS is_current, r.created_at AS fact_created_at, r.last_confirmed_at AS last_confirmed_at, r.superseded_at AS superseded_at, r.superseded_by AS superseded_by, coalesce(r.memory_kind, 'fact') AS memory_kind, coalesce(r.review_status, 'approved') AS review_status, coalesce(r.confidence, 1.0) AS confidence, r.observed_at AS observed_at, r.valid_from AS valid_from, r.expires_at AS expires_at, r.expired_at AS expired_at, r.source_conversation_id AS fact_source_conversation_id, r.source_message_id AS fact_source_message_id, r.last_source_conversation_id AS fact_last_source_conversation_id, r.last_source_message_id AS fact_last_source_message_id, r.source_conversation_ids AS fact_source_conversation_ids, r.source_message_ids AS fact_source_message_ids, id(m) AS target_id, m.entity_key AS target_key, m.name AS target_name, m.identity_context AS target_identity_context, labels(m) AS target_labels, coalesce(m.importance, 1.0) AS target_importance, m.source_conversation_id AS target_node_conversation_id, m.source_message_id AS target_node_message_id, m.source_conversation_ids AS target_node_conversation_ids, m.source_message_ids AS target_node_message_ids ORDER BY coalesce(r.is_current, true) DESC, coalesce(r.last_confirmed_at, r.updated_at, r.created_at, 0) DESC LIMIT $limit",
+        "parameters": {
+          "limit": 12,
+          "include_inactive": true
+        }
+      }
+    ],
+    "transactions": 0,
+    "result": {
+      "nodes": [
+        {
+          "id": "1",
+          "entity_key": "person:nafiz",
+          "name": "nafiz",
+          "label": "Person",
+          "identity_context": null,
+          "importance": 1.0,
+          "source_conversation_id": null,
+          "source_message_id": null,
+          "source_conversation_ids": [],
+          "source_message_ids": []
+        },
+        {
+          "id": "2",
+          "entity_key": "location:surabaya",
+          "name": "surabaya",
+          "label": "Location",
+          "identity_context": null,
+          "importance": 1.0,
+          "source_conversation_id": null,
+          "source_message_id": null,
+          "source_conversation_ids": [],
+          "source_message_ids": []
+        }
+      ],
+      "links": [
+        {
+          "id": "fact:new",
+          "source": "1",
+          "target": "2",
+          "label": "LIVES_IN",
+          "is_current": true,
+          "created_at": null,
+          "last_confirmed_at": 1000,
+          "superseded_at": null,
+          "superseded_by": null,
+          "memory_kind": null,
+          "review_status": null,
+          "confidence": null,
+          "observed_at": null,
+          "valid_from": null,
+          "expires_at": null,
+          "expired_at": null,
+          "source_conversation_id": null,
+          "source_message_id": null,
+          "last_source_conversation_id": null,
+          "last_source_message_id": null,
+          "source_conversation_ids": [],
+          "source_message_ids": []
+        }
+      ]
+    }
+  },
+  "search": {
+    "calls": [
+      {
+        "query": "CALL () { CALL db.index.fulltext.queryNodes( 'entity_identity_search', $fulltext_query, {limit: 64} ) YIELD node, score RETURN node, score UNION MATCH (node:Entity) WHERE node.name IN $exact_keywords RETURN node, 10.0 AS score } WITH node, max(score) AS candidate_score ORDER BY candidate_score DESC LIMIT 64 MATCH (node)-[candidate_relation]-(other:Entity) WITH startNode(candidate_relation) AS n, candidate_relation AS r, endNode(candidate_relation) AS m, max(candidate_score) AS candidate_score WHERE coalesce(r.review_status, 'approved') = 'approved' AND type(r) <> 'BELONGS_TO' AND ( ($project_id IS NOT NULL AND r.project_id = $project_id) OR coalesce(r.scope, CASE WHEN r.project_id IS NULL THEN 'global' ELSE 'project' END) = 'global' ) AND ($include_historical OR ( coalesce(r.is_current, true) = true AND (r.expires_at IS NULL OR r.expires_at > timestamp()) )) AND ( coalesce(n.name, '') =~ $token_pattern OR coalesce(m.name, '') =~ $token_pattern OR replace(toLower(type(r)), '_', ' ') =~ $token_pattern OR any(item IN $remaining_keywords WHERE coalesce(n.name, '') =~ item.pattern OR coalesce(m.name, '') =~ item.pattern OR replace(toLower(type(r)), '_', ' ') =~ item.pattern) ) WITH n, r, m, CASE WHEN $project_id IS NOT NULL AND r.project_id = $project_id THEN 2 ELSE 1 END AS scope_score, size([item IN $prepared_keywords WHERE coalesce(n.name, '') =~ item.pattern OR coalesce(m.name, '') =~ item.pattern OR replace(toLower(type(r)), '_', ' ') =~ item.pattern]) AS coverage_score, size([item IN $prepared_keywords WHERE coalesce(n.name, '') =~ item.pattern OR coalesce(m.name, '') =~ item.pattern]) AS entity_score, size([item IN $prepared_keywords WHERE replace(toLower(type(r)), '_', ' ') =~ item.pattern]) AS relation_score, candidate_score, (coalesce(n.importance, 1.0) + coalesce(m.importance, 1.0) + coalesce(r.importance, 1.0)) AS importance_score, coalesce(r.last_confirmed_at, r.updated_at, r.created_at, 0) AS recency_score ORDER BY CASE WHEN entity_score > 0 AND relation_score > 0 THEN 1 ELSE 0 END DESC, coverage_score DESC, scope_score DESC, candidate_score DESC, importance_score DESC, recency_score DESC LIMIT 20 RETURN n.name, type(r), m.name, labels(n) AS n_labels, labels(m) AS m_labels, n.identity_context AS n_identity_context, m.identity_context AS m_identity_context, r.fact_id AS fact_id, coalesce(r.is_current, true) AS is_current, recency_score AS last_confirmed_at, coalesce(r.memory_kind, 'fact') AS memory_kind, coalesce(r.scope, CASE WHEN r.project_id IS NULL THEN 'global' ELSE 'project' END) AS scope, r.project_id AS project_id, r.observed_at AS observed_at, r.expires_at AS expires_at",
+        "parameters": {
+          "kw": "nafiz",
+          "token_pattern": "(?i).*(?<![\\p{L}\\p{N}])nafiz(?![\\p{L}\\p{N}]).*",
+          "remaining_keywords": [
+            {
+              "normalized": "surabaya",
+              "pattern": "(?i).*(?<![\\p{L}\\p{N}])surabaya(?![\\p{L}\\p{N}]).*"
+            }
+          ],
+          "prepared_keywords": [
+            {
+              "normalized": "nafiz",
+              "pattern": "(?i).*(?<![\\p{L}\\p{N}])nafiz(?![\\p{L}\\p{N}]).*"
+            },
+            {
+              "normalized": "surabaya",
+              "pattern": "(?i).*(?<![\\p{L}\\p{N}])surabaya(?![\\p{L}\\p{N}]).*"
+            }
+          ],
+          "exact_keywords": [
+            "nafiz",
+            "surabaya"
+          ],
+          "fulltext_query": "\"nafiz\" OR \"surabaya\"",
+          "include_historical": true,
+          "project_id": "project:fixture"
+        }
+      }
+    ],
+    "transactions": 0,
+    "result": [
+      "[fact_id: fact:new; current: true; kind: fact; scope: global; project_id: none; last_confirmed_at: 1970-01-01T00:00:01+00:00; expires_at_ms: none] (Person 'nafiz') --[LIVES_IN]--> (Location 'surabaya')"
+    ]
+  },
+  "node_update": {
+    "calls": [
+      {
+        "query": "MATCH (n:Entity {entity_key: $entity_key}) RETURN n.name AS name, n.identity_context AS identity_context, n.importance AS importance, labels(n) AS labels",
+        "parameters": {
+          "entity_key": "person:nafiz"
+        }
+      },
+      {
+        "query": "MATCH (n:Entity {entity_key: $entity_key}) SET n.entity_key = $new_entity_key, n.name = $name, n.display_name = $name, n.identity_context = $identity_context, n.identity_signature = $identity_signature, n.importance = $importance, n.updated_at = timestamp() RETURN n.entity_key AS entity_key, n.name AS name, n.identity_context AS identity_context, n.importance AS importance, labels(n) AS labels",
+        "parameters": {
+          "entity_key": "person:nafiz",
+          "new_entity_key": "person:nafiz",
+          "name": "nafiz",
+          "identity_context": null,
+          "identity_signature": null,
+          "importance": 2.0
+        }
+      }
+    ],
+    "transactions": 0,
+    "result": {
+      "name": "nafiz",
+      "labels": [
+        "Entity",
+        "Person"
+      ],
+      "identity_context": "",
+      "importance": 1.0,
+      "entity_key": "person:nafiz",
+      "count": 1,
+      "linked_keys": [],
+      "fact_ids": [
+        "fact:old"
+      ],
+      "newest_event_at": 0,
+      "fact_id": "fact:new",
+      "source_message_ids": [
+        "message:old"
+      ],
+      "is_current": true,
+      "source_id": 1,
+      "target_id": 2,
+      "source_key": "person:nafiz",
+      "target_key": "location:surabaya",
+      "source_name": "nafiz",
+      "target_name": "surabaya",
+      "source_labels": [
+        "Entity",
+        "Person"
+      ],
+      "target_labels": [
+        "Entity",
+        "Location"
+      ],
+      "source_importance": 1.0,
+      "target_importance": 1.0,
+      "rel_type": "LIVES_IN",
+      "n_labels": [
+        "Entity",
+        "Person"
+      ],
+      "m_labels": [
+        "Entity",
+        "Location"
+      ],
+      "n.name": "nafiz",
+      "m.name": "surabaya",
+      "type(r)": "LIVES_IN",
+      "last_confirmed_at": 1000,
+      "deleted": {
+        "entity_key": "person:nafiz",
+        "name": "nafiz"
+      }
+    }
+  },
+  "fact_update": {
+    "calls": [
+      {
+        "query": "MATCH (source:Entity)-[r]->(target:Entity) WHERE r.fact_id = $fact_id SET r.is_current = CASE WHEN $set_is_current THEN $is_current ELSE coalesce(r.is_current, true) END, r.importance = CASE WHEN $set_importance THEN $importance ELSE coalesce(r.importance, 1.0) END, r.last_confirmed_at = CASE WHEN $set_is_current AND $is_current THEN timestamp() ELSE r.last_confirmed_at END, r.superseded_at = CASE WHEN $set_is_current AND NOT $is_current THEN timestamp() WHEN $set_is_current AND $is_current THEN null ELSE r.superseded_at END, r.superseded_by = CASE WHEN $set_is_current AND $is_current THEN null ELSE r.superseded_by END, r.review_status = CASE WHEN $set_is_current AND $is_current THEN 'approved' ELSE coalesce(r.review_status, 'approved') END, r.updated_at = timestamp() RETURN r.fact_id AS fact_id, source.name AS source, target.name AS target, type(r) AS relation, r.is_current AS is_current, r.importance AS importance, r.created_at AS created_at, r.last_confirmed_at AS last_confirmed_at, r.superseded_at AS superseded_at, r.superseded_by AS superseded_by, r.review_status AS review_status, coalesce(r.source_message_ids, []) + CASE WHEN r.source_message_id IS NULL THEN [] ELSE [r.source_message_id] END AS source_message_ids",
+        "parameters": {
+          "fact_id": "fact:fixture",
+          "set_is_current": true,
+          "is_current": false,
+          "set_importance": true,
+          "importance": 0.5
+        }
+      }
+    ],
+    "transactions": 0,
+    "result": {
+      "name": "nafiz",
+      "labels": [
+        "Entity",
+        "Person"
+      ],
+      "identity_context": "",
+      "importance": 1.0,
+      "entity_key": "person:nafiz",
+      "count": 1,
+      "linked_keys": [],
+      "fact_ids": [
+        "fact:old"
+      ],
+      "newest_event_at": 0,
+      "fact_id": "fact:new",
+      "source_message_ids": [
+        "message:old"
+      ],
+      "is_current": true,
+      "source_id": 1,
+      "target_id": 2,
+      "source_key": "person:nafiz",
+      "target_key": "location:surabaya",
+      "source_name": "nafiz",
+      "target_name": "surabaya",
+      "source_labels": [
+        "Entity",
+        "Person"
+      ],
+      "target_labels": [
+        "Entity",
+        "Location"
+      ],
+      "source_importance": 1.0,
+      "target_importance": 1.0,
+      "rel_type": "LIVES_IN",
+      "n_labels": [
+        "Entity",
+        "Person"
+      ],
+      "m_labels": [
+        "Entity",
+        "Location"
+      ],
+      "n.name": "nafiz",
+      "m.name": "surabaya",
+      "type(r)": "LIVES_IN",
+      "last_confirmed_at": 1000,
+      "deleted": {
+        "entity_key": "person:nafiz",
+        "name": "nafiz"
+      }
+    }
+  },
+  "node_delete": {
+    "calls": [
+      {
+        "query": "MATCH (n:Entity {entity_key: $entity_key}) OPTIONAL MATCH (identity:EntityIdentity)-[:RESOLVES_TO]->(n) WITH n, collect(identity) AS identities, { entity_key: n.entity_key, name: n.name, identity_context: n.identity_context } AS deleted FOREACH (identity IN identities | DETACH DELETE identity) DETACH DELETE n RETURN deleted",
+        "parameters": {
+          "entity_key": "person:nafiz"
+        }
+      }
+    ],
+    "transactions": 0,
+    "result": {
+      "entity_key": "person:nafiz",
+      "name": "nafiz"
+    }
+  },
+  "fact_delete": {
+    "calls": [
+      {
+        "query": "MATCH (source:Entity)-[r]->(target:Entity) WHERE r.fact_id = $fact_id WITH r, source.name AS source, target.name AS target, type(r) AS relation, properties(r) AS properties, coalesce(r.source_message_ids, []) + CASE WHEN r.source_message_id IS NULL THEN [] ELSE [r.source_message_id] END AS source_message_ids DELETE r RETURN source, target, relation, properties, source_message_ids",
+        "parameters": {
+          "fact_id": "fact:fixture"
+        }
+      }
+    ],
+    "transactions": 0,
+    "result": {
+      "name": "nafiz",
+      "labels": [
+        "Entity",
+        "Person"
+      ],
+      "identity_context": "",
+      "importance": 1.0,
+      "entity_key": "person:nafiz",
+      "count": 1,
+      "linked_keys": [],
+      "fact_ids": [
+        "fact:old"
+      ],
+      "newest_event_at": 0,
+      "fact_id": "fact:new",
+      "source_message_ids": [
+        "message:old"
+      ],
+      "is_current": true,
+      "source_id": 1,
+      "target_id": 2,
+      "source_key": "person:nafiz",
+      "target_key": "location:surabaya",
+      "source_name": "nafiz",
+      "target_name": "surabaya",
+      "source_labels": [
+        "Entity",
+        "Person"
+      ],
+      "target_labels": [
+        "Entity",
+        "Location"
+      ],
+      "source_importance": 1.0,
+      "target_importance": 1.0,
+      "rel_type": "LIVES_IN",
+      "n_labels": [
+        "Entity",
+        "Person"
+      ],
+      "m_labels": [
+        "Entity",
+        "Location"
+      ],
+      "n.name": "nafiz",
+      "m.name": "surabaya",
+      "type(r)": "LIVES_IN",
+      "last_confirmed_at": 1000,
+      "deleted": {
+        "entity_key": "person:nafiz",
+        "name": "nafiz"
+      }
+    }
+  },
+  "provenance_cleanup": {
+    "calls": [
+      {
+        "query": "MATCH ()-[r]->() WHERE r.source_conversation_id = $conversation_id OR r.last_source_conversation_id = $conversation_id OR $conversation_id IN coalesce(r.source_conversation_ids, []) WITH r, [item IN coalesce(r.source_conversation_ids, []) WHERE item <> $conversation_id] AS remaining_conversation_ids, [item IN coalesce(r.source_message_ids, []) WHERE NOT (item IN $source_message_ids)] AS remaining_message_ids SET r.source_conversation_ids = remaining_conversation_ids, r.source_message_ids = remaining_message_ids, r.source_conversation_id = CASE WHEN r.source_conversation_id = $conversation_id THEN null ELSE r.source_conversation_id END, r.source_message_id = CASE WHEN r.source_message_id IN $source_message_ids THEN null ELSE r.source_message_id END, r.last_source_conversation_id = CASE WHEN r.last_source_conversation_id = $conversation_id THEN null ELSE r.last_source_conversation_id END, r.last_source_message_id = CASE WHEN r.last_source_message_id IN $source_message_ids THEN null ELSE r.last_source_message_id END, r.source_deleted = true, r.updated_at = timestamp() RETURN count(r) AS count",
+        "parameters": {
+          "conversation_id": "conversation:fixture",
+          "source_message_ids": [
+            "message:fixture"
+          ]
+        }
+      },
+      {
+        "query": "MATCH ()-[r]->() WHERE coalesce(r.source_deleted, false) = true AND r.source_conversation_id IS NULL AND size(coalesce(r.source_conversation_ids, [])) = 0 DELETE r RETURN count(r) AS count",
+        "parameters": {}
+      },
+      {
+        "query": "MATCH (n:Entity) WHERE n.source_conversation_id = $conversation_id OR n.last_source_conversation_id = $conversation_id OR $conversation_id IN coalesce(n.source_conversation_ids, []) WITH n, [item IN coalesce(n.source_conversation_ids, []) WHERE item <> $conversation_id] AS remaining_conversation_ids, [item IN coalesce(n.source_message_ids, []) WHERE NOT (item IN $source_message_ids)] AS remaining_message_ids SET n.source_conversation_ids = remaining_conversation_ids, n.source_message_ids = remaining_message_ids, n.source_conversation_id = CASE WHEN n.source_conversation_id = $conversation_id THEN null ELSE n.source_conversation_id END, n.source_message_id = CASE WHEN n.source_message_id IN $source_message_ids THEN null ELSE n.source_message_id END, n.last_source_conversation_id = CASE WHEN n.last_source_conversation_id = $conversation_id THEN null ELSE n.last_source_conversation_id END, n.last_source_message_id = CASE WHEN n.last_source_message_id IN $source_message_ids THEN null ELSE n.last_source_message_id END, n.source_deleted = true, n.updated_at = timestamp() RETURN count(n) AS count",
+        "parameters": {
+          "conversation_id": "conversation:fixture",
+          "source_message_ids": [
+            "message:fixture"
+          ]
+        }
+      },
+      {
+        "query": "MATCH (n:Entity) WHERE coalesce(n.source_deleted, false) = true AND n.source_conversation_id IS NULL AND size(coalesce(n.source_conversation_ids, [])) = 0 AND NOT EXISTS { MATCH (n)-[r]-() WHERE type(r) <> 'RESOLVES_TO' } DETACH DELETE n RETURN count(n) AS count",
+        "parameters": {}
+      },
+      {
+        "query": "MATCH (identity:EntityIdentity) WHERE NOT (identity)-[:RESOLVES_TO]->() DETACH DELETE identity",
+        "parameters": {}
+      }
+    ],
+    "transactions": 0,
+    "result": {
+      "relationships_unlinked": 1,
+      "facts_deleted": 1,
+      "nodes_unlinked": 1,
+      "orphan_nodes_deleted": 1
+    }
+  },
+  "consolidation": {
+    "calls": [
+      {
+        "query": "MATCH ()-[r]->() WHERE coalesce(r.is_current, true) = true AND r.expires_at IS NOT NULL AND r.expires_at <= timestamp() SET r.is_current = false, r.expired_at = timestamp(), r.updated_at = timestamp() RETURN count(r) AS count",
+        "parameters": {}
+      },
+      {
+        "query": "MATCH (n:Entity) WHERE n.importance IS NOT NULL SET n.importance = n.importance * $decay RETURN count(n) AS count",
+        "parameters": {
+          "decay": 0.81
+        }
+      },
+      {
+        "query": "MATCH (n:Entity) WHERE EXISTS { MATCH (n)-[r]-() WHERE type(r) <> 'RESOLVES_TO' AND coalesce(r.is_current, true) = true } RETURN count(n) AS count",
+        "parameters": {}
+      },
+      {
+        "query": "MATCH (n:Entity) WHERE n.importance < 0.2 AND n.updated_at < (timestamp() - 2592000000) AND NOT EXISTS { MATCH (n)-[r]-() WHERE type(r) <> 'RESOLVES_TO' AND coalesce(r.is_current, true) = true } DETACH DELETE n RETURN count(n) AS count",
+        "parameters": {}
+      },
+      {
+        "query": "MATCH (n:Entity) WHERE NOT EXISTS { MATCH (n)-[r]-() WHERE type(r) <> 'RESOLVES_TO' } DETACH DELETE n RETURN count(n) AS count",
+        "parameters": {}
+      },
+      {
+        "query": "MATCH (identity:EntityIdentity) WHERE NOT (identity)-[:RESOLVES_TO]->() DETACH DELETE identity",
+        "parameters": {}
+      }
+    ],
+    "transactions": 0,
+    "result": {
+      "expired_states": 1,
+      "decayed": 1,
+      "pruned_orphans": 1,
+      "forgotten_nodes": 1,
+      "protected_current_nodes": 1
+    }
+  }
+}

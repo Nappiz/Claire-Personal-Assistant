@@ -18,7 +18,7 @@ save_memory = vector_store.save_memory
 reconcile_memory = vector_store.reconcile_memory
 search_memory = vector_store.search_memory
 search_project_memory_candidates = vector_store.search_project_memory_candidates
-from services.neo4j_service import neo4j_client
+from app.infrastructure.graph.neo4j_graph_store import graph_store as neo4j_client
 from services.llm_service import MemoryLLMUnavailableError, extract_knowledge, route_memory_query, _reference_matches
 from services.ai_usage_service import usage_context
 from configs.settings import settings
