@@ -12,12 +12,12 @@ from models.message import Message
 from models.conversation import Conversation
 from models.memory_outbox import MemoryOutbox
 from models.project import Project
-from services.qdrant_service import (
-    save_memory,
-    reconcile_memory,
-    search_memory,
-    search_project_memory_candidates,
-)
+from app.infrastructure.vector.qdrant_vector_store import vector_store
+
+save_memory = vector_store.save_memory
+reconcile_memory = vector_store.reconcile_memory
+search_memory = vector_store.search_memory
+search_project_memory_candidates = vector_store.search_project_memory_candidates
 from services.neo4j_service import neo4j_client
 from services.llm_service import MemoryLLMUnavailableError, extract_knowledge, route_memory_query, _reference_matches
 from services.ai_usage_service import usage_context
@@ -871,7 +871,7 @@ def _cancel_claim(job_id: str, lease_token: str, reason: str) -> dict | None:
 
 def _compensate_deleted_conversation(snapshot: dict) -> None:
     """Remove writes that crossed a deletion tombstone after an external call began."""
-    from services.qdrant_service import delete_memory_by_session
+    delete_memory_by_session = vector_store.delete_memory_by_session
 
     errors: list[Exception] = []
     for operation in (
@@ -1054,7 +1054,7 @@ def process_memory_job(job_id: str, *, report_errors: bool = False) -> dict | No
                 return _cancel_claim(job_id, lease_token, "Conversation deleted during graph write")
             invalidated_ids = list((graph_result or {}).get("invalidated_source_message_ids") or [])
             if invalidated_ids:
-                from services.qdrant_service import set_memories_status
+                set_memories_status = vector_store.set_memories_status
 
                 set_source_messages_memory_status(invalidated_ids, "inactive")
                 set_memories_status(
@@ -1901,7 +1901,7 @@ def reindex_vector_memory_from_outbox() -> dict:
                 point_id=item["id"],
             )
             if not _vector_source_is_active(item):
-                from services.qdrant_service import set_memories_status
+                set_memories_status = vector_store.set_memories_status
                 set_memories_status([item["message_id"]], "inactive")
                 skipped += 1
                 continue

@@ -234,11 +234,11 @@ async def vector_memory_reindex_task():
     """Migrate legacy vector payloads without delaying API readiness."""
     try:
         from services.memory_service import reindex_vector_memory_from_outbox
-        from services.qdrant_service import warmup_embedding_model
+        from app.infrastructure.vector.qdrant_vector_store import vector_store
 
         result = await asyncio.to_thread(reindex_vector_memory_from_outbox)
         logger.info("Vector-memory reindex result: %s", result)
-        health = await asyncio.to_thread(warmup_embedding_model)
+        health = await asyncio.to_thread(vector_store.warmup_embedding_model)
         logger.info("Embedding warmup result: %s", health)
     except Exception:
         logger.exception("Vector-memory reindex failed; chat will run in degraded mode")

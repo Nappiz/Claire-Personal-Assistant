@@ -1,5 +1,6 @@
 """Migration adapters. LLM/memory algorithms remain unchanged until stages 5â€“6."""
-from services import memory_service, llm_service, qdrant_service
+from services import memory_service, llm_service
+from app.infrastructure.vector.qdrant_vector_store import vector_store
 from services.neo4j_service import neo4j_client
 from services.ai_usage_service import set_usage_context as legacy_set_usage_context, reset_usage_context as legacy_reset_usage_context
 from app.observability.correlation import correlation
@@ -34,13 +35,7 @@ class LegacyMemoryWorkflow:
         return memory_service.get_session_summary(self.uow.db, session_id)
 
 
-class LegacyVectorStore:
-    def __getattr__(self, name):
-        return getattr(qdrant_service, name)
-
-
 llm_gateway = LegacyLLMGateway()
-vector_store = LegacyVectorStore()
 graph_store = neo4j_client
 
 
