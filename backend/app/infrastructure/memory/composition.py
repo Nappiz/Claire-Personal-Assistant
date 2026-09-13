@@ -18,3 +18,6 @@ def create_memory_workflows(executor=None):
         retrieval_executor=RetrievalExecutor(settings, executor), scope=ScopePolicy(settings),
         retrieval=RetrievalPolicy(settings), assertion=AssertionPolicy(settings),
         outbox=OutboxPolicy(settings), usage_context=usage_context)
+
+
+memory_workflows = create_memory_workflows()

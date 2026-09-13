@@ -8,13 +8,13 @@ from app.infrastructure import legacy_bridges as bridges
 
 def resource_dependencies(db=None):
     uow = SQLAlchemyUnitOfWork(db) if db is not None else None
-    return ResourceDependencies(uow, bridges.graph_store, bridges.vector_store, bridges.LegacyMemoryWorkflow(uow))
+    return ResourceDependencies(uow, bridges.graph_store, bridges.vector_store, bridges.bound_memory_workflows(uow))
 
 
 def chat_dependencies(db=None):
     from app.api.errors import _internal_error_payload, _upstream_error_payload, _is_llm_provider_error
     uow = SQLAlchemyUnitOfWork(db) if db is not None else None
-    memory = bridges.LegacyMemoryWorkflow(uow)
+    memory = bridges.bound_memory_workflows(uow)
     return ChatDependencies(
         memory=memory, llm=bridges.llm_gateway, history=memory, uow=uow,
         threadpool=run_in_threadpool, prepare_session=_prepare_stream_session,

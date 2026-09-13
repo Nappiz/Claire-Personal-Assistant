@@ -2,7 +2,7 @@ from typing import Any, Protocol
 
 
 class MemoryWorkflow(Protocol):
-    """Temporary port over lifecycle workflows; replaced in roadmap stage 6."""
+    """API-facing workflows backed by bounded application use cases."""
     TurnConflictError: type[Exception]
     def begin_turn(self, *args: Any, **kwargs: Any) -> dict: ...
     def retrieve_context(self, *args: Any, **kwargs: Any) -> Any: ...

@@ -209,7 +209,8 @@ async def memory_outbox_retry_task():
     """Retry failed external-memory writes independently of scheduled decay."""
     while True:
         try:
-            from services.memory_service import process_due_memory_jobs
+            from app.infrastructure.memory.composition import memory_workflows
+            process_due_memory_jobs = memory_workflows.process_due_memory_jobs
 
             completed = await asyncio.to_thread(process_due_memory_jobs, limit=25)
             if completed:
@@ -222,7 +223,8 @@ async def memory_outbox_retry_task():
 async def conversation_summary_retry_task():
     while True:
         try:
-            from services.memory_service import process_due_summaries
+            from app.infrastructure.memory.composition import memory_workflows
+            process_due_summaries = memory_workflows.process_due_summaries
 
             await asyncio.to_thread(process_due_summaries, limit=20)
         except Exception:
@@ -233,7 +235,8 @@ async def conversation_summary_retry_task():
 async def vector_memory_reindex_task():
     """Migrate legacy vector payloads without delaying API readiness."""
     try:
-        from services.memory_service import reindex_vector_memory_from_outbox
+        from app.infrastructure.memory.composition import memory_workflows
+        reindex_vector_memory_from_outbox = memory_workflows.reindex_vector_memory_from_outbox
         from app.infrastructure.vector.qdrant_vector_store import vector_store
 
         result = await asyncio.to_thread(reindex_vector_memory_from_outbox)

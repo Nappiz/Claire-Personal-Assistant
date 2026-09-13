@@ -9,13 +9,17 @@ from app.infrastructure.persistence.memory.memory_outbox_leases import OutboxLea
 from app.infrastructure.persistence.memory.memory_process_outbox_job import ProcessOutboxJobQueries
 from app.infrastructure.persistence.memory.memory_retry_due_jobs import RetryDueJobsQueries
 from app.infrastructure.persistence.memory.conversations_cancel_conversation_jobs import CancelConversationJobsQueries
+from app.infrastructure.persistence.memory.conversations_process_summary import ProcessSummaryQueries
+from app.infrastructure.persistence.memory.conversations_record_internal_error import RecordInternalErrorQueries
+from app.infrastructure.persistence.memory.memory_reindex_vectors import ReindexVectorsQueries
+from app.infrastructure.persistence.memory.conversations_save_title import SaveTitleQueries
 from models.message import Message
 from models.conversation import Conversation
 from models.memory_outbox import MemoryOutbox
 from models.llm_usage import LLMUsageLog
 
 
-class MemoryTransaction(ResolveProjectScopeQueries, RetrieveContextQueries, ReadHistoryQueries, BeginTurnQueries, CompleteTurnQueries, PersistInteractionQueries, OutboxSnapshotsQueries, OutboxLeasesQueries, ProcessOutboxJobQueries, RetryDueJobsQueries, CancelConversationJobsQueries):
+class MemoryTransaction(ResolveProjectScopeQueries, RetrieveContextQueries, ReadHistoryQueries, BeginTurnQueries, CompleteTurnQueries, PersistInteractionQueries, OutboxSnapshotsQueries, OutboxLeasesQueries, ProcessOutboxJobQueries, RetryDueJobsQueries, CancelConversationJobsQueries, ProcessSummaryQueries, RecordInternalErrorQueries, ReindexVectorsQueries, SaveTitleQueries):
     """SQLAlchemy-backed UOW; query capabilities stay in focused adapter mixins."""
     def __init__(self, db, config):
         self.db, self.config = db, config
