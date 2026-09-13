@@ -101,6 +101,12 @@ Kegagalan sementara saat ekstraksi decorator WebSearchPlan, URL gateway dan sisa
 import bridge telah diperbaiki sebelum checkpoint final; tidak ditutupi dengan
 perubahan assertion/fixture.
 
+Satu pengulangan suite sempat gagal pada
+test_h02_router_and_scope_share_the_total_deadline: wall-clock 187 ms dengan
+assertion <180 ms. Pengulangan kelompok 11 tes dan full 214 tes kemudian lulus
+tanpa edit kode atau assertion. Tidak diklaim sebagai baseline failure yang
+terbukti; margin timing kecil tetap merupakan risiko pada host/CI yang sibuk.
+
 ## Eval dan telemetry
 
 Evaluation manifest: evals/manifest.json. Evaluasi membekukan prompt requests,
@@ -145,6 +151,9 @@ yang belum memiliki tag tersebut; CI tetap menjalankan seluruh fixture contract.
 6. Thread yang sudah menjalankan external write tidak bisa dipaksa berhenti oleh
    cancellation coroutine. Lease/idempotency/tombstone/compensation tetap menjadi
    guard; queue/deployment eksternal tidak ditambahkan.
+7. Tes deadline wall-clock memiliki margin kecil dan menunjukkan satu kegagalan
+   timing intermiten pada pengulangan. Hasil terakhir hijau tidak menghapus risiko
+   flakiness tersebut; investigasi/perbaikan test deterministik adalah task terpisah.
 
 ## Checkpoint dan rollback
 
