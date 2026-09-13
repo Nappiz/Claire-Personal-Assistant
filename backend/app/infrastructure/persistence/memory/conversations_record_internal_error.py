@@ -1,11 +1,6 @@
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import and_, or_, update
 from models.message import Message
 from models.conversation import Conversation
 from models.memory_outbox import MemoryOutbox
-from models.project import Project
-from models.llm_usage import LLMUsageLog
-from app.domain.memory.contracts import _MEMORY_JOB_LEASE_SECONDS
 
 class RecordInternalErrorQueries:
     def record_internal_error_user_row(self, user_message_id):
@@ -54,8 +49,6 @@ class RecordInternalErrorQueries:
     def record_internal_error_memory_job(self, memory_job_id):
         return (self.db.get(MemoryOutbox, memory_job_id))
 
-    def record_internal_error_conversation(self, session_id):
-        return (self.db.get(Conversation, session_id))
 
     def record_internal_error_conversation_after_claim(self, session_id):
         return (self.db.get(Conversation, session_id))

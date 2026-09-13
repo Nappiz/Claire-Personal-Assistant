@@ -1,11 +1,5 @@
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import and_, or_, update
-from models.message import Message
-from models.conversation import Conversation
+from sqlalchemy import and_, or_
 from models.memory_outbox import MemoryOutbox
-from models.project import Project
-from models.llm_usage import LLMUsageLog
-from app.domain.memory.contracts import _MEMORY_JOB_LEASE_SECONDS
 
 class RetryDueJobsQueries:
     def process_due_memory_jobs_job_ids(self, legacy_lease_expired_at, now, safe_limit):

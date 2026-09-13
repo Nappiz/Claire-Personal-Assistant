@@ -1,16 +1,7 @@
 from __future__ import annotations
 import logging
-import traceback
-import time
-import uuid
 import re
-import concurrent.futures
-from datetime import datetime, timedelta, timezone
-from typing import Any
-from schemas.chat_sch import MemoryContext, ProjectScopeContext, RetrievalStatus, QueryResolution
-from app.domain.llm.contracts import MemoryLLMUnavailableError, ERROR_FALLBACK_MSG
-from app.domain.memory.contracts import TurnConflictError, _MEMORY_RECALL_RE, _HISTORICAL_RE, _SEARCH_STOPWORDS, _VAGUE_PROJECT_REFERENCE_RE, _MEMORY_RETRY_BASE_SECONDS, _MEMORY_RETRY_MAX_SECONDS, _MEMORY_JOB_LEASE_SECONDS
-from app.domain.diagnostics import InternalFeatureError, current_exception_log, redact_diagnostic_log
+from app.domain.memory.contracts import MEMORY_RECALL_RE, SEARCH_STOPWORDS
 logger = logging.getLogger("services.memory_service")
 
 class RetrievalPolicy:
@@ -67,7 +58,7 @@ class RetrievalPolicy:
 
     def requires_personal_memory(self, user_message: str) -> bool:
         normalized = " ".join(str(user_message or "").lower().split())
-        return bool(_MEMORY_RECALL_RE.search(normalized) or self.memory_intent_keywords(normalized))
+        return bool(MEMORY_RECALL_RE.search(normalized) or self.memory_intent_keywords(normalized))
 
     def local_search_keywords(self, user_message: str) -> list[str]:
         """Produce a useful graph query even if the LLM router is unavailable."""
@@ -76,7 +67,7 @@ class RetrievalPolicy:
         if re.search(r"\b(aku|saya|gw|gue|ku)\b", normalized):
             keywords.append("nafiz")
         for token in re.findall(r"[a-zA-Z0-9_-]+", normalized):
-            if len(token) >= 3 and token not in _SEARCH_STOPWORDS:
+            if len(token) >= 3 and token not in SEARCH_STOPWORDS:
                 keywords.append(token)
     
         deduplicated: list[str] = []

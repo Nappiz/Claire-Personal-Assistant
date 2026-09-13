@@ -1,16 +1,6 @@
 from __future__ import annotations
 import logging
-import traceback
-import time
-import uuid
-import re
-import concurrent.futures
-from datetime import datetime, timedelta, timezone
 from typing import Any
-from schemas.chat_sch import MemoryContext, ProjectScopeContext, RetrievalStatus, QueryResolution
-from app.domain.llm.contracts import MemoryLLMUnavailableError, ERROR_FALLBACK_MSG
-from app.domain.memory.contracts import TurnConflictError, _MEMORY_RECALL_RE, _HISTORICAL_RE, _SEARCH_STOPWORDS, _VAGUE_PROJECT_REFERENCE_RE, _MEMORY_RETRY_BASE_SECONDS, _MEMORY_RETRY_MAX_SECONDS, _MEMORY_JOB_LEASE_SECONDS
-from app.domain.diagnostics import InternalFeatureError, current_exception_log, redact_diagnostic_log
 logger = logging.getLogger("services.memory_service")
 
 class ProcessSummary:
@@ -47,7 +37,7 @@ class ProcessSummary:
         fold_candidates = [row for row in rows if int(row.turn_sequence or 0) < keep_from_sequence]
         if not fold_candidates:
             return {"status": "not_due", "folded": 0}
-        fold_rows: list[db.new_message] = []
+        fold_rows: list[Any] = []
         estimated_tokens = max(1, len(current_summary) // 3)
         for sequence in sorted({int(row.turn_sequence or 0) for row in fold_candidates}):
             group = [row for row in fold_candidates if int(row.turn_sequence or 0) == sequence]

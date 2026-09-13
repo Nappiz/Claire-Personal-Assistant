@@ -1,23 +1,15 @@
 from __future__ import annotations
 import logging
-import traceback
-import time
-import uuid
-import re
-import concurrent.futures
 from datetime import datetime, timedelta, timezone
 from typing import Any
-from schemas.chat_sch import MemoryContext, ProjectScopeContext, RetrievalStatus, QueryResolution
-from app.domain.llm.contracts import MemoryLLMUnavailableError, ERROR_FALLBACK_MSG
-from app.domain.memory.contracts import TurnConflictError, _MEMORY_RECALL_RE, _HISTORICAL_RE, _SEARCH_STOPWORDS, _VAGUE_PROJECT_REFERENCE_RE, _MEMORY_RETRY_BASE_SECONDS, _MEMORY_RETRY_MAX_SECONDS, _MEMORY_JOB_LEASE_SECONDS
-from app.domain.diagnostics import InternalFeatureError, current_exception_log, redact_diagnostic_log
+from app.domain.memory.contracts import MEMORY_RETRY_BASE_SECONDS, MEMORY_RETRY_MAX_SECONDS
 logger = logging.getLogger("services.memory_service")
 
 class OutboxPolicy:
     def __init__(self, config):
         self.config = config
 
-    def outbox_job_data(self, job: db.new_outbox) -> dict:
+    def outbox_job_data(self, job: Any) -> dict:
         """Return only operational metadata; never expose chat payload by default."""
         return {
             "id": job.id,
@@ -47,8 +39,8 @@ class OutboxPolicy:
             }
         else:
             delay_seconds = min(
-                _MEMORY_RETRY_BASE_SECONDS * (2 ** max(job.attempts - 1, 0)),
-                _MEMORY_RETRY_MAX_SECONDS,
+                MEMORY_RETRY_BASE_SECONDS * (2 ** max(job.attempts - 1, 0)),
+                MEMORY_RETRY_MAX_SECONDS,
             )
             updates = {
                 "status": "failed",

@@ -1,11 +1,6 @@
-from datetime import datetime, timedelta, timezone
-from sqlalchemy import and_, or_, update
 from models.message import Message
 from models.conversation import Conversation
 from models.memory_outbox import MemoryOutbox
-from models.project import Project
-from models.llm_usage import LLMUsageLog
-from app.domain.memory.contracts import _MEMORY_JOB_LEASE_SECONDS
 
 class PersistInteractionQueries:
     def save_interaction_conversation(self, session_id):

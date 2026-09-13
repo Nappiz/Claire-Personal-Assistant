@@ -1,11 +1,7 @@
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from sqlalchemy import and_, or_, update
-from models.message import Message
-from models.conversation import Conversation
 from models.memory_outbox import MemoryOutbox
-from models.project import Project
-from models.llm_usage import LLMUsageLog
-from app.domain.memory.contracts import _MEMORY_JOB_LEASE_SECONDS
+from app.domain.memory.contracts import MEMORY_JOB_LEASE_SECONDS
 
 class OutboxLeasesQueries:
     def claim_memory_job_job(self, job_id):
@@ -35,15 +31,13 @@ class OutboxLeasesQueries:
             .values(
                 status="processing",
                 lease_token=token,
-                lease_expires_at=now + timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS),
+                lease_expires_at=now + timedelta(seconds=MEMORY_JOB_LEASE_SECONDS),
                 attempts=MemoryOutbox.attempts + 1,
                 last_error=None,
                 updated_at=now,
             )
         ))
 
-    def finish_memory_job_job(self, job_id):
-        return (self.db.get(MemoryOutbox, job_id))
 
     def finish_memory_job_changed(self, job_id, lease_token, updates):
         return (self.db.query(MemoryOutbox).filter(
@@ -51,8 +45,6 @@ class OutboxLeasesQueries:
             MemoryOutbox.lease_token == lease_token,
         ).update(updates, synchronize_session=False))
 
-    def finish_memory_job_current(self, job_id):
-        return (self.db.get(MemoryOutbox, job_id))
 
     def finish_memory_job_current_after_claim(self, job_id):
         return (self.db.get(MemoryOutbox, job_id))

@@ -1,16 +1,7 @@
 from __future__ import annotations
 import logging
-import traceback
-import time
-import uuid
-import re
-import concurrent.futures
 from datetime import datetime, timedelta, timezone
-from typing import Any
-from schemas.chat_sch import MemoryContext, ProjectScopeContext, RetrievalStatus, QueryResolution
-from app.domain.llm.contracts import MemoryLLMUnavailableError, ERROR_FALLBACK_MSG
-from app.domain.memory.contracts import TurnConflictError, _MEMORY_RECALL_RE, _HISTORICAL_RE, _SEARCH_STOPWORDS, _VAGUE_PROJECT_REFERENCE_RE, _MEMORY_RETRY_BASE_SECONDS, _MEMORY_RETRY_MAX_SECONDS, _MEMORY_JOB_LEASE_SECONDS
-from app.domain.diagnostics import InternalFeatureError, current_exception_log, redact_diagnostic_log
+from app.domain.memory.contracts import MEMORY_JOB_LEASE_SECONDS
 logger = logging.getLogger("services.memory_service")
 
 class RetryDueJobs:
@@ -19,7 +10,7 @@ class RetryDueJobs:
     
         safe_limit = min(max(int(limit), 1), 100)
         now = datetime.now(timezone.utc)
-        legacy_lease_expired_at = now - timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS)
+        legacy_lease_expired_at = now - timedelta(seconds=MEMORY_JOB_LEASE_SECONDS)
         db = self.persistence.open()
         try:
             job_ids = [
@@ -72,7 +63,7 @@ class RetryDueJobs:
                 updated_at = job.updated_at
                 if updated_at.tzinfo is None:
                     updated_at = updated_at.replace(tzinfo=timezone.utc)
-                if updated_at > datetime.now(timezone.utc) - timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS):
+                if updated_at > datetime.now(timezone.utc) - timedelta(seconds=MEMORY_JOB_LEASE_SECONDS):
                     raise ValueError("Cannot retry a recently processing memory job")
             job.status = "pending"
             job.next_retry_at = datetime.now(timezone.utc)

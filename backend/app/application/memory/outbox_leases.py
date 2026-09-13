@@ -1,16 +1,8 @@
 from __future__ import annotations
 import logging
-import traceback
-import time
 import uuid
-import re
-import concurrent.futures
 from datetime import datetime, timedelta, timezone
-from typing import Any
-from schemas.chat_sch import MemoryContext, ProjectScopeContext, RetrievalStatus, QueryResolution
-from app.domain.llm.contracts import MemoryLLMUnavailableError, ERROR_FALLBACK_MSG
-from app.domain.memory.contracts import TurnConflictError, _MEMORY_RECALL_RE, _HISTORICAL_RE, _SEARCH_STOPWORDS, _VAGUE_PROJECT_REFERENCE_RE, _MEMORY_RETRY_BASE_SECONDS, _MEMORY_RETRY_MAX_SECONDS, _MEMORY_JOB_LEASE_SECONDS
-from app.domain.diagnostics import InternalFeatureError, current_exception_log, redact_diagnostic_log
+from app.domain.memory.contracts import MEMORY_JOB_LEASE_SECONDS
 logger = logging.getLogger("services.memory_service")
 
 class OutboxLeases:
@@ -18,7 +10,7 @@ class OutboxLeases:
         """Atomically acquire one due job; a stale worker cannot finalize this lease."""
     
         now = datetime.now(timezone.utc)
-        legacy_lease_expired_at = now - timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS)
+        legacy_lease_expired_at = now - timedelta(seconds=MEMORY_JOB_LEASE_SECONDS)
         token = str(uuid.uuid4())
         db = self.persistence.open()
         try:
@@ -28,7 +20,7 @@ class OutboxLeases:
                     return None
                 job.status = "processing"
                 job.lease_token = token
-                job.lease_expires_at = now + timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS)
+                job.lease_expires_at = now + timedelta(seconds=MEMORY_JOB_LEASE_SECONDS)
                 job.attempts += 1
                 job.last_error = None
                 db.commit()

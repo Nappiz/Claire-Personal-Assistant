@@ -1,16 +1,7 @@
 from __future__ import annotations
 import logging
-import traceback
-import time
-import uuid
-import re
-import concurrent.futures
-from datetime import datetime, timedelta, timezone
-from typing import Any
-from schemas.chat_sch import MemoryContext, ProjectScopeContext, RetrievalStatus, QueryResolution
-from app.domain.llm.contracts import MemoryLLMUnavailableError, ERROR_FALLBACK_MSG
-from app.domain.memory.contracts import TurnConflictError, _MEMORY_RECALL_RE, _HISTORICAL_RE, _SEARCH_STOPWORDS, _VAGUE_PROJECT_REFERENCE_RE, _MEMORY_RETRY_BASE_SECONDS, _MEMORY_RETRY_MAX_SECONDS, _MEMORY_JOB_LEASE_SECONDS
-from app.domain.diagnostics import InternalFeatureError, current_exception_log, redact_diagnostic_log
+from schemas.chat_sch import ProjectScopeContext
+from app.domain.memory.contracts import VAGUE_PROJECT_REFERENCE_RE
 logger = logging.getLogger("services.memory_service")
 
 class ResolveProjectScope:
@@ -56,7 +47,7 @@ class ResolveProjectScope:
         # project management). Only possessive/deictic wording is a reference to
         # one of the user's stored projects; explicit project names were handled
         # above.
-        has_owned_project_reference = bool(_VAGUE_PROJECT_REFERENCE_RE.search(user_message))
+        has_owned_project_reference = bool(VAGUE_PROJECT_REFERENCE_RE.search(user_message))
         if not has_owned_project_reference:
             return ProjectScopeContext()
     
@@ -71,7 +62,7 @@ class ResolveProjectScope:
                     resolution="history",
                 )
     
-        if len(project_rows) == 1 and _VAGUE_PROJECT_REFERENCE_RE.search(user_message):
+        if len(project_rows) == 1 and VAGUE_PROJECT_REFERENCE_RE.search(user_message):
             return ProjectScopeContext(
                 status="resolved",
                 project_id=project_rows[0][0],

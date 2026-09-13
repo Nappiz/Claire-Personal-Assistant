@@ -2,15 +2,10 @@ from __future__ import annotations
 import logging
 import traceback
 import time
-import uuid
-import re
 import concurrent.futures
-from datetime import datetime, timedelta, timezone
-from typing import Any
 from schemas.chat_sch import MemoryContext, ProjectScopeContext, RetrievalStatus, QueryResolution
-from app.domain.llm.contracts import MemoryLLMUnavailableError, ERROR_FALLBACK_MSG
-from app.domain.memory.contracts import TurnConflictError, _MEMORY_RECALL_RE, _HISTORICAL_RE, _SEARCH_STOPWORDS, _VAGUE_PROJECT_REFERENCE_RE, _MEMORY_RETRY_BASE_SECONDS, _MEMORY_RETRY_MAX_SECONDS, _MEMORY_JOB_LEASE_SECONDS
-from app.domain.diagnostics import InternalFeatureError, current_exception_log, redact_diagnostic_log
+from app.domain.memory.contracts import HISTORICAL_RE, VAGUE_PROJECT_REFERENCE_RE
+from app.domain.diagnostics import InternalFeatureError, redact_diagnostic_log
 logger = logging.getLogger("services.memory_service")
 
 class RetrieveContext:
@@ -58,7 +53,7 @@ class RetrieveContext:
                 diagnostics.append(traceback.format_exc())
                 warnings.append("project_scope_unavailable")
                 project_scope = ProjectScopeContext(
-                    status="resolved" if project_id else ("ambiguous" if _VAGUE_PROJECT_REFERENCE_RE.search(user_message) else "none"),
+                    status="resolved" if project_id else ("ambiguous" if VAGUE_PROJECT_REFERENCE_RE.search(user_message) else "none"),
                     project_id=project_id,
                     project_name=project_id,
                     resolution="session" if project_id else None,
@@ -68,7 +63,7 @@ class RetrieveContext:
             warnings.append("project_scope_timeout")
             diagnostics.append(f"Project scope resolution exceeded the {timeout_seconds}s retrieval deadline.")
             project_scope = ProjectScopeContext(
-                status="resolved" if project_id else ("ambiguous" if _VAGUE_PROJECT_REFERENCE_RE.search(user_message) else "none"),
+                status="resolved" if project_id else ("ambiguous" if VAGUE_PROJECT_REFERENCE_RE.search(user_message) else "none"),
                 project_id=project_id,
                 project_name=project_id,
                 resolution="session" if project_id else None,
@@ -146,7 +141,7 @@ class RetrieveContext:
         neo4j_results: list[str] = []
         qdrant_available = True
         neo4j_available = True
-        include_historical = bool(_HISTORICAL_RE.search(user_message.lower()))
+        include_historical = bool(HISTORICAL_RE.search(user_message.lower()))
     
         remaining = max(deadline - time.monotonic(), 0.0)
         if remaining <= 0:
