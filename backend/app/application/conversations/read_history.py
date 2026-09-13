@@ -11,15 +11,15 @@ class ReadHistory:
         db = self.persistence.wrap(db)
         if not session_id:
             return []
-            
+
         messages = (
             db.get_session_history_messages(limit, session_id)
         )
-        
+
         history = []
         for msg in reversed(messages):
             history.append({"role": msg.role, "content": msg.content})
-            
+
         return history
 
     def get_session_summary(self, db: Any, session_id: str) -> str:

@@ -31,4 +31,3 @@ reference answers, recall@k/MRR and answer-grounding criteria. Compare against a
 pinned model/prompt/index version, control provider cost and private-data use,
 and attach evaluation evidence before release. Never regenerate these
 characterization fixtures to approve a structural refactor.
-

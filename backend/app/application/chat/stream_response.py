@@ -11,7 +11,7 @@ from app.domain.llm.tool_contracts import WEB_TOOL_INSTRUCTIONS
 logger = logging.getLogger("services.llm_service")
 
 class StreamResponse:
-    async def generate_chat_response_stream(self, 
+    async def generate_chat_response_stream(self,
         user_message: str,
         memory_context: MemoryContext,
         session_history: list | None = None,
@@ -28,7 +28,7 @@ class StreamResponse:
             yield {"type": "delta", "delta": clarification}
             yield {"type": "completion", "response_status": "complete", "finish_reason": "stop"}
             return
-    
+
         logger.info("Streaming response from %s (%s)...", provider, model)
         model_name = model or DEFAULT_MODEL_NAME
         llm_messages = self.prompts.build_chat_messages(
@@ -54,7 +54,7 @@ PROJECT MEMORY OVERRIDE:
                 memory_context.project_scope.resolution,
             )
         base_message_count = len(llm_messages)
-    
+
         # Provider settings currently live in synchronous SQLAlchemy. Resolve them
         # in the worker pool so opening a stream never blocks the event loop.
         api_key, base_url = await self.threadpool(self.gateway.get_llm_connection, provider)
@@ -84,7 +84,7 @@ PROJECT MEMORY OVERRIDE:
             2.0,
             min(float(self.config.WEB_TOOL_PLANNING_TIMEOUT_SECONDS), 30.0),
         )
-    
+
         try:
             state = ToolLoopState(client=client, provider=provider, model_name=model_name, user_message=user_message, session_history=session_history, memory_context=memory_context, llm_messages=llm_messages, total_usage=total_usage, web_context=web_context, search_performed=search_performed, allowed_urls=allowed_urls, pages=pages, max_rounds=max_rounds, max_read_urls=max_read_urls, read_cache=read_cache, attempted_urls=attempted_urls, direct_answer=direct_answer, direct_finish_reason=direct_finish_reason, planning_timeout=planning_timeout, base_message_count=base_message_count, web_tools_allowed=web_tools_allowed)
             async with aclosing(self.execute_web_tool_loop(state)) as planning:
@@ -92,7 +92,7 @@ PROJECT MEMORY OVERRIDE:
                     yield event
             web_context, search_performed = state.web_context, state.search_performed
             direct_answer, direct_finish_reason = state.direct_answer, state.direct_finish_reason
-    
+
             if search_performed:
                 yield {
                     "type": "web_search",
@@ -112,7 +112,7 @@ PROJECT MEMORY OVERRIDE:
                         for page in web_context.pages
                     ],
                 }
-    
+
                 # The planning phase is over. Some OpenAI-compatible Gemini models
                 # otherwise attempt another implicit tool call in the final request,
                 # which produces a successful HTTP response but no visible text.
@@ -123,17 +123,17 @@ FINAL RESPONSE PHASE:
 - Berikan jawaban final kepada user sekarang berdasarkan hasil tool yang sudah ada.
 - Jika bukti tidak memadai, nyatakan batasnya secara jujur; jangan menebak.
 """
-    
+
             if direct_answer is not None:
                 yield {"type": "delta", "delta": direct_answer}
                 if total_usage:
                     yield {"type": "usage", "usage": dict(total_usage)}
                 yield self.responses.completion_outcome({"finish_reasons": [direct_finish_reason] if direct_finish_reason else []})
                 return
-    
+
             usage_emitted = False
             answer_text_emitted = False
-    
+
             async def stream_final_attempt(
                 messages: list[dict[str, Any]],
                 diagnostics: dict[str, Any],
@@ -164,7 +164,7 @@ FINAL RESPONSE PHASE:
                                 "usage": dict(total_usage),
                             }
                             usage_emitted = True
-    
+
                         for choice in getattr(chunk, "choices", None) or []:
                             self.responses.record_stream_diagnostics(choice, diagnostics)
                             content = self.responses.stream_delta_text(getattr(choice, "delta", None))
@@ -175,7 +175,7 @@ FINAL RESPONSE PHASE:
                                 if content.strip():
                                     answer_text_emitted = True
                                 yield {"type": "delta", "delta": content}
-    
+
             first_diagnostics: dict[str, Any] = {
                 "finish_reasons": [],
                 "tool_calls": [],
@@ -185,7 +185,7 @@ FINAL RESPONSE PHASE:
                 async for event in attempt:
                     yield event
             final_diagnostics = first_diagnostics
-    
+
             if not answer_text_emitted:
                 logger.warning(
                     "Final LLM stream returned no visible text; finish_reasons=%s, "
@@ -211,7 +211,7 @@ FINAL RESPONSE PHASE:
                 )) as attempt:
                     async for event in attempt:
                         yield event
-    
+
                 if not answer_text_emitted:
                     logger.error(
                         "Final LLM recovery stream also returned no visible text; "
@@ -221,7 +221,7 @@ FINAL RESPONSE PHASE:
                         bool(recovery_diagnostics["refusal"]),
                     )
                 final_diagnostics = recovery_diagnostics
-    
+
             if total_usage and not usage_emitted:
                 yield {"type": "usage", "usage": dict(total_usage)}
             yield self.responses.completion_outcome(final_diagnostics)

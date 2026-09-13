@@ -40,12 +40,12 @@ class RetrievalPolicy:
             (r"\b(alergi)\b", ["allergic to"]),
             (r"\b(punya|memiliki|milik)\b", ["owns"]),
         )
-    
+
         hints: list[str] = []
         for pattern, relation_keywords in relation_rules:
             if re.search(pattern, normalized):
                 hints.extend(relation_keywords)
-    
+
         refers_to_user = bool(
             re.search(r"\b(aku|saya|gw|gue|nafiz|ku)\b", normalized)
             or re.search(r"\b(pacarku|pasanganku|pekerjaanku|rumahku)\b", normalized)
@@ -69,7 +69,7 @@ class RetrievalPolicy:
         for token in re.findall(r"[a-zA-Z0-9_-]+", normalized):
             if len(token) >= 3 and token not in SEARCH_STOPWORDS:
                 keywords.append(token)
-    
+
         deduplicated: list[str] = []
         for keyword in keywords:
             clean_keyword = " ".join(keyword.lower().split())[:100]

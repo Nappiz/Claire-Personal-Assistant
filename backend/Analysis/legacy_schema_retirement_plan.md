@@ -21,4 +21,3 @@ Retire repair only in a separately approved migration/operations task:
 Those last changes intentionally alter startup/migration behavior and must not
 be smuggled into the structural refactor. Existing migration files, schema,
 database contents and revision markers are untouched here.
-

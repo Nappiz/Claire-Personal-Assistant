@@ -23,7 +23,7 @@ class WebToolPolicy:
 
     def web_search_plan_from_call(self, call: Any):
         WebSearchPlan = self.web.WebSearchPlan
-    
+
         arguments = self.tool_arguments(call)
         raw_queries = arguments.get("queries")
         if not isinstance(raw_queries, list):
@@ -47,13 +47,13 @@ class WebToolPolicy:
             research_goal=research_goal or queries[0],
         )
 
-    def web_tools_allowed_for_turn(self, 
+    def web_tools_allowed_for_turn(self,
         user_message: str,
         memory_context: MemoryContext,
     ) -> bool:
         """Keep internal project recall on memory stores unless web was explicitly requested."""
         plan_web_search = self.web.plan_web_search
-    
+
         scope = memory_context.project_scope
         if scope.status == "ambiguous":
             return False
@@ -68,7 +68,7 @@ class WebToolPolicy:
         )
         if explicitly_requests_web:
             return True
-    
+
         public_information_intent = bool(re.search(
             r"\b(?:apa\s+(?:itu|beda)|perbedaan|bandingkan|compare|comparison|versus|vs|"
             r"rekomendasi|referensi|dokumentasi|documentation)\b|"
@@ -78,7 +78,7 @@ class WebToolPolicy:
         ))
         if public_information_intent:
             return True
-    
+
         # A scope inferred from the current message/history is an internal-project
         # turn. In a project session, however, unrelated public questions must keep
         # web access even when vector/graph retrieval happened to return a hit.

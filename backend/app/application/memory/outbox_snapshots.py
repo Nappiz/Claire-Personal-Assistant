@@ -5,7 +5,7 @@ logger = logging.getLogger("services.memory_service")
 
 class OutboxSnapshots:
     def get_memory_job_snapshot(self, job_id: str, lease_token: str | None = None) -> dict | None:
-    
+
         db = self.persistence.open()
         try:
             job = db.get_memory_job_snapshot_job(job_id)
@@ -36,7 +36,7 @@ class OutboxSnapshots:
             db.close()
 
     def update_memory_job(self, job_id: str, *, expected_lease_token: str | None = None, **updates) -> dict | None:
-    
+
         db = self.persistence.open()
         try:
             if expected_lease_token is not None and hasattr(db, "execute"):
@@ -62,7 +62,7 @@ class OutboxSnapshots:
 
     def memory_job_is_active(self, job_id: str, lease_token: str) -> bool:
         """Stop workers that race with a user deleting the source conversation."""
-    
+
         db = self.persistence.open()
         try:
             job = db.memory_job_is_active_job(job_id, lease_token)
@@ -86,7 +86,7 @@ class OutboxSnapshots:
             db.close()
 
     def conversation_is_deleted(self, conversation_id: str) -> bool:
-    
+
         db = self.persistence.open()
         try:
             conversation = db.conversation_is_deleted_conversation(conversation_id)

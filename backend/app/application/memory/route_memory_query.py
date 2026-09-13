@@ -30,13 +30,13 @@ class RouteMemoryQuery:
                 ),
                 response_format={"type": "json_object"}
             )
-            
+
             content = response.choices[0].message.content.strip()
-            
+
             if content.startswith("```"):
                 content = re.sub(r"^```(?:json)?\n?", "", content)
                 content = re.sub(r"\n?```$", "", content)
-    
+
             data = json.loads(content)
             if not isinstance(data, dict) or not isinstance(data.get("keywords", []), list):
                 raise ValueError("Memory router returned an invalid schema")

@@ -6,7 +6,7 @@ logger = logging.getLogger("services.memory_service")
 class ProcessSummary:
     def process_conversation_summary(self, session_id: str) -> dict:
         """Fold old completed turns with an optimistic checkpoint; stale writers lose."""
-    
+
         db = self.persistence.open()
         try:
             conversation = (
@@ -23,7 +23,7 @@ class ProcessSummary:
             )
         finally:
             db.close()
-    
+
         if len(rows) <= 30:
             db = self.persistence.open()
             try:
@@ -32,7 +32,7 @@ class ProcessSummary:
             finally:
                 db.close()
             return {"status": "not_due", "folded": 0}
-    
+
         keep_from_sequence = int(rows[-30].turn_sequence or 0)
         fold_candidates = [row for row in rows if int(row.turn_sequence or 0) < keep_from_sequence]
         if not fold_candidates:
@@ -50,7 +50,7 @@ class ProcessSummary:
         messages = [{"role": row.role, "content": row.content} for row in fold_rows]
         with self.usage_context(conversation_id=session_id, turn_id=None, job_id=None, job_attempt=None):
             updated_summary = self.generate_session_summary(current_summary, messages)
-    
+
         db = self.persistence.open()
         try:
             result = db.process_conversation_summary_result(checkpoint, expected_next_sequence, fold_through, session_id, updated_summary, version)
@@ -63,7 +63,7 @@ class ProcessSummary:
             db.close()
 
     def process_due_summaries(self, limit: int = 20) -> list[dict]:
-    
+
         db = self.persistence.open()
         try:
             ids = [

@@ -22,15 +22,15 @@ class ProcessOutboxJob:
                 return self.outbox.outbox_job_data(job) if job else None
             finally:
                 db.close()
-    
+
         snapshot = self.leased_memory_job_snapshot(job_id, lease_token)
         if not snapshot or not self.memory_job_is_active(job_id, lease_token):
             return self.cancel_claim(job_id, lease_token, "Source conversation is deleted or lease was lost")
-    
+
         stage_errors: list[str] = []
         reportable_error_logs: list[str] = []
         reportable_operation: str | None = None
-    
+
         def finish_result() -> dict | None:
             result = self.finish_memory_job(job_id, lease_token, stage_errors)
             if report_errors and reportable_error_logs:
@@ -40,7 +40,7 @@ class ProcessOutboxJob:
                     "\n\n".join(reportable_error_logs)
                 )
             return result
-    
+
         # Validate extraction first in a user-facing strict run. This prevents a
         # malformed extractor result from being written to another memory store.
         if not snapshot["extraction_completed"]:
@@ -68,14 +68,14 @@ class ProcessOutboxJob:
                 if report_errors and not isinstance(exc, MemoryLLMUnavailableError):
                     reportable_operation = reportable_operation or "knowledge_extraction"
                     reportable_error_logs.append(traceback.format_exc())
-    
+
         if report_errors and reportable_error_logs:
             return finish_result()
-    
+
         snapshot = self.leased_memory_job_snapshot(job_id, lease_token)
         if not snapshot or not self.memory_job_is_active(job_id, lease_token):
             return self.cancel_claim(job_id, lease_token, "Source conversation is deleted or lease was lost")
-    
+
         if (
             snapshot["extraction_completed"]
             and not snapshot["vector_saved"]
@@ -118,14 +118,14 @@ class ProcessOutboxJob:
                 if report_errors:
                     reportable_operation = reportable_operation or "vector_memory_write"
                     reportable_error_logs.append(traceback.format_exc())
-    
+
         if report_errors and reportable_error_logs:
             return finish_result()
-    
+
         snapshot = self.leased_memory_job_snapshot(job_id, lease_token)
         if not snapshot or not self.memory_job_is_active(job_id, lease_token):
             return self.cancel_claim(job_id, lease_token, "Source conversation is deleted or lease was lost")
-    
+
         if snapshot["extraction_completed"] and not snapshot["graph_saved"]:
             try:
                 extracted_data = snapshot["extracted_knowledge"] or {"nodes": [], "edges": [], "retractions": []}
@@ -152,7 +152,7 @@ class ProcessOutboxJob:
                 invalidated_ids = list((graph_result or {}).get("invalidated_source_message_ids") or [])
                 if invalidated_ids:
                     set_memories_status = self.vector.set_memories_status
-    
+
                     self.set_source_messages_memory_status(invalidated_ids, "inactive")
                     set_memories_status(
                         invalidated_ids,
@@ -166,13 +166,13 @@ class ProcessOutboxJob:
                 if report_errors:
                     reportable_operation = reportable_operation or "knowledge_graph_write"
                     reportable_error_logs.append(traceback.format_exc())
-    
+
         return finish_result()
 
     def compensate_deleted_conversation(self, snapshot: dict) -> None:
         """Remove writes that crossed a deletion tombstone after an external call began."""
         delete_memory_by_session = self.vector.delete_memory_by_session
-    
+
         errors: list[Exception] = []
         for operation in (
             lambda: delete_memory_by_session(snapshot["conversation_id"]),
@@ -194,7 +194,7 @@ class ProcessOutboxJob:
         clean_ids = {str(item) for item in message_ids if item}
         if not clean_ids:
             return 0
-    
+
         db = self.persistence.open()
         try:
             count = db.set_source_messages_memory_status_count(clean_ids, status)

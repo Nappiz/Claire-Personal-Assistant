@@ -24,4 +24,3 @@ Facade dihapus hanya jika semua consumer termasuk script audit sudah bermigrasi.
 Script audit lokal yang belum dilacak tidak boleh dibuang atau diam-diam dirusak.
 Owner compatibility: maintainer backend; kriteria penghentian: nol consumer legacy
 pada runtime, tes, dan audit/tools, dengan contract suite tetap hijau.
-

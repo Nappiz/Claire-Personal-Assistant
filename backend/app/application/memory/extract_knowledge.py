@@ -7,7 +7,7 @@ from app.domain.graph.fact_policy import validate_extracted_knowledge
 logger = logging.getLogger("services.llm_service")
 
 class ExtractKnowledge:
-    def extract_knowledge(self, 
+    def extract_knowledge(self,
         user_message: str,
         neo4j_context: list = None,
         session_history: list | None = None,
@@ -17,15 +17,15 @@ class ExtractKnowledge:
         event_at: datetime | None = None,
     ) -> dict:
         """
-    Tugas khusus untuk Slow Lane: 
+    Tugas khusus untuk Slow Lane:\x20
     Menganalisis pesan pengguna dan mengekstrak fakta penting menjadi format JSON (Nodes & Edges).
     """
         if self.extraction.is_memory_recall_question(user_message):
             logger.info("Skipping knowledge extraction for recall-only question: %s", user_message)
             return {"nodes": [], "edges": []}
-    
+
         system_prompt = self.prompts.build_extraction_prompt(user_message, neo4j_context, session_history, project_id, project_name, event_at)
-        
+
         content = ""
         try:
             response = self.gateway.memory_completion(
@@ -37,15 +37,15 @@ class ExtractKnowledge:
                 temperature=0.1,
                 response_format={"type": "json_object"}
             )
-            
+
             content = response.choices[0].message.content.strip()
-            
+
             # Accept an enclosing code fence, but never carve an arbitrary object
             # out of an array/error wrapper and silently reinterpret its schema.
             fenced = re.fullmatch(r"```(?:json)?\s*([\s\S]*?)\s*```", content, flags=re.IGNORECASE)
             if fenced:
                 content = fenced.group(1).strip()
-                
+
             raw_extraction = self.extraction.validate_extraction_envelope(json.loads(content))
             sanitized = self.extraction.sanitize_extracted_knowledge(raw_extraction)
             sanitized = self.ground_locations(sanitized, user_message, session_history, neo4j_context)
@@ -107,7 +107,7 @@ class ExtractKnowledge:
                         }
                     )
             return validate_extracted_knowledge(sanitized)
-            
+
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON from LLM in extract_knowledge: {e}. Raw content: {content}")
             if raise_on_error:

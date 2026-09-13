@@ -75,10 +75,10 @@ class ExtractionPolicy:
             return False
         if self.contains_explicit_personal_assertion(normalized):
             return False
-    
+
         if self.has_statement_in_question_turn(user_message):
             return False
-    
+
         if QUESTION_CLAUSE_RE.match(normalized):
             return True
         if re.search(
@@ -99,7 +99,7 @@ class ExtractionPolicy:
         """Normalize harmless provider drift before strict schema validation."""
         if not isinstance(data, dict):
             return {"nodes": [], "edges": []}
-    
+
         node_fields = {"id", "label", "name", "identity_context", "confidence"}
         edge_fields = {
             "source",
@@ -129,7 +129,7 @@ class ExtractionPolicy:
                     sorted(unknown_fields),
                 )
             valid_nodes.append({field: node[field] for field in node_fields if field in node})
-    
+
         valid_edges = []
         for edge in data.get("edges", []):
             if not isinstance(edge, dict):
@@ -162,7 +162,7 @@ class ExtractionPolicy:
                 # not poison/retry the entire durable memory job.
                 normalized_edge["replaces_current_relation"] = False
             valid_edges.append(normalized_edge)
-    
+
         valid_retractions = []
         for retraction in data.get("retractions", []):
             if not isinstance(retraction, dict):
@@ -173,7 +173,7 @@ class ExtractionPolicy:
             valid_retractions.append(
                 {field: retraction[field] for field in retraction_fields if field in retraction}
             )
-    
+
         return {"nodes": valid_nodes, "edges": valid_edges, "retractions": valid_retractions}
 
     def validate_extraction_envelope(self, data: object) -> dict:
@@ -197,7 +197,7 @@ class ExtractionPolicy:
         """Render the immediately preceding dialogue as passive reference data."""
         if not session_history:
             return ""
-    
+
         summary_messages = [
             message for message in session_history
             if isinstance(message, dict) and message.get("role") == "summary"
@@ -206,7 +206,7 @@ class ExtractionPolicy:
             message for message in session_history
             if isinstance(message, dict) and message.get("role") in {"user", "assistant"}
         ][-limit:]
-    
+
         formatted = []
         for message in [*summary_messages, *dialogue_messages]:
             if not isinstance(message, dict):

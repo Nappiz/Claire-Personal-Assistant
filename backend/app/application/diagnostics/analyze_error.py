@@ -4,7 +4,7 @@ from app.domain.llm.contracts import DEFAULT_MODEL_NAME
 logger = logging.getLogger("services.llm_service")
 
 class AnalyzeError:
-    async def analyze_internal_error(self, 
+    async def analyze_internal_error(self,
         *,
         operation: str,
         diagnostic_log: str,
@@ -50,5 +50,5 @@ class AnalyzeError:
                 return str(content).strip()
         finally:
             await client.close()
-    
+
         return "Aku tidak bisa memastikan penyebab pastinya dari respons diagnostik yang kosong."

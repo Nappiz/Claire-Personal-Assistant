@@ -22,4 +22,3 @@ AIInvocation schema/accounting behavior are unchanged by this extraction.
 Cancellation drains coroutine tasks, but Python cannot force-stop a function
 already running in an executor thread. Existing leases, tombstones, and
 compensation remain the safety mechanisms for those writes.
-

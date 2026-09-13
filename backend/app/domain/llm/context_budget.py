@@ -25,7 +25,7 @@ class ContextBudget:
         graph_items = [str(item)[:500] for item in list(memory_context.neo4j_context or [])[:8]]
         return vector_items, graph_items
 
-    def fit_history_to_prompt_budget(self, 
+    def fit_history_to_prompt_budget(self,
         system_prompt: str,
         user_message: str,
         session_history: list | None,

@@ -64,4 +64,3 @@ class MaintenanceContracts(unittest.TestCase):
         db.close.assert_called_once_with()
         graph.consolidate_memory.assert_not_called()
         save.assert_not_called()
-

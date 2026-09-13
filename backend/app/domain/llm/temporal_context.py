@@ -29,7 +29,7 @@ class TemporalContext:
             logger.error("Unknown USER_TIMEZONE %r; falling back to UTC", timezone_name)
             return timezone.utc, "UTC"
 
-    def current_temporal_context(self, 
+    def current_temporal_context(self,
         now: datetime | None = None,
         timezone_name: str | None = None,
     ) -> dict[str, str | int]:
@@ -40,7 +40,7 @@ class TemporalContext:
         if instant.tzinfo is None:
             instant = instant.replace(tzinfo=timezone.utc)
         local_now = instant.astimezone(user_timezone)
-    
+
         offset = local_now.utcoffset()
         total_offset_minutes = int(offset.total_seconds() // 60) if offset else 0
         offset_sign = "+" if total_offset_minutes >= 0 else "-"
@@ -49,7 +49,7 @@ class TemporalContext:
         timezone_abbreviation = local_now.tzname() or resolved_timezone
         weekday = _INDONESIAN_WEEKDAYS[local_now.weekday()]
         month = _INDONESIAN_MONTHS[local_now.month - 1]
-    
+
         return {
             "local_datetime_iso": local_now.isoformat(timespec="seconds"),
             "local_datetime_human": (

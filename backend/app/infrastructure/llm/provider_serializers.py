@@ -13,7 +13,7 @@ class ProviderSerializers:
                 payload = dict(call)
             else:
                 payload = {}
-    
+
             # Gemini 3 puts its required encrypted thought signature in this
             # provider extension. Never synthesize or modify it: replay exactly
             # what the provider returned for the corresponding function call.
@@ -24,7 +24,7 @@ class ProviderSerializers:
                     if hasattr(extra_content, "model_dump")
                     else extra_content
                 )
-    
+
             function = getattr(call, "function", None)
             function_payload = payload.get("function") or {}
             call_id = getattr(call, "id", None) or payload.get("id")

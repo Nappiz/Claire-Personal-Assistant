@@ -8,7 +8,7 @@ class GenerateTitle:
     Men-generate judul percakapan pendek (3-5 kata) berdasarkan pesan pertama user.
     """
         logger.info(f"Generating session title for: {user_message}")
-        
+
         prompt = f"""
 Tugasmu adalah membuat judul singkat untuk sebuah percakapan chat.
 Judul HARUS maksimal 5 kata. Jangan gunakan tanda kutip, titik, atau format tambahan.

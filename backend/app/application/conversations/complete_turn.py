@@ -5,7 +5,7 @@ logger = logging.getLogger("services.memory_service")
 class CompleteTurn:
     def mark_turn_status(self, session_id: str, turn_id: str, status: str, details: dict | None = None) -> None:
         """Release a turn lease while keeping its durable user message retryable."""
-    
+
         if status not in {"interrupted_turn", "failed_turn", "pending_turn"}:
             raise ValueError("Unsupported turn status")
         db = self.persistence.open()

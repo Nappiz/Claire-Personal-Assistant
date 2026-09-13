@@ -7,7 +7,7 @@ logger = logging.getLogger("services.memory_service")
 class RetryDueJobs:
     def process_due_memory_jobs(self, limit: int = 25) -> list[dict]:
         """Retry durable jobs after a restart or exponential-backoff delay."""
-    
+
         safe_limit = min(max(int(limit), 1), 100)
         now = datetime.now(timezone.utc)
         legacy_lease_expired_at = now - timedelta(seconds=MEMORY_JOB_LEASE_SECONDS)
@@ -19,7 +19,7 @@ class RetryDueJobs:
             ]
         finally:
             db.close()
-    
+
         results = []
         for job_id in job_ids:
             try:
@@ -32,7 +32,7 @@ class RetryDueJobs:
 
     def list_memory_jobs(self, limit: int = 50) -> list[dict]:
         """List job health for an authenticated operator without exposing messages."""
-    
+
         safe_limit = min(max(int(limit), 1), 100)
         db = self.persistence.open()
         try:
@@ -45,7 +45,7 @@ class RetryDueJobs:
 
     def retry_memory_job(self, job_id: str) -> dict | None:
         """Make an unfinished job eligible for immediate processing again."""
-    
+
         db = self.persistence.open()
         try:
             job = db.retry_memory_job_job(job_id)

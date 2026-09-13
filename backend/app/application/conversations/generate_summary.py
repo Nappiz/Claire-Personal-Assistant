@@ -3,7 +3,7 @@ import logging
 logger = logging.getLogger("services.llm_service")
 
 class GenerateSummary:
-    def generate_session_summary(self, 
+    def generate_session_summary(self,
         existing_summary: str | None,
         messages_to_fold: list[dict],
     ) -> str:

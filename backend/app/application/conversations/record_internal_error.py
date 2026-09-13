@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 logger = logging.getLogger("services.memory_service")
 
 class RecordInternalError:
-    def record_internal_error(self, 
+    def record_internal_error(self,
         *,
         session_id: str,
         user_message: str,
@@ -17,7 +17,7 @@ class RecordInternalError:
         turn_sequence: int | None = None,
     ) -> None:
         """Persist an error turn and keep it out of Claire's conversational memory."""
-    
+
         db = self.persistence.open()
         try:
             user_row = db.record_internal_error_user_row(user_message_id) if user_message_id else None
@@ -27,7 +27,7 @@ class RecordInternalError:
             if assistant_row is None and turn_id:
                 assistant_row = db.record_internal_error_assistant_row_after_claim(session_id, turn_id)
             created_count = 0
-    
+
             # If persistence committed but failed before returning its identifiers,
             # reuse that just-written pair instead of creating duplicate messages.
             if user_row is None and assistant_row is None:
@@ -42,7 +42,7 @@ class RecordInternalError:
                     if recent_assistant is not None:
                         user_row = recent_user
                         assistant_row = recent_assistant
-    
+
             if user_row is None:
                 user_row = db.new_message(
                     conversation_id=session_id,
@@ -56,7 +56,7 @@ class RecordInternalError:
                 created_count += 1
             else:
                 user_row.message_type = "failed_turn"
-    
+
             if assistant_row is None:
                 assistant_row = db.new_message(
                     conversation_id=session_id,
@@ -82,13 +82,13 @@ class RecordInternalError:
                     assistant_created_at = assistant_created_at.replace(tzinfo=timezone.utc)
                 if assistant_created_at <= user_created_at:
                     assistant_row.created_at = user_created_at + timedelta(microseconds=1)
-    
+
             if memory_job_id:
                 memory_job = db.record_internal_error_memory_job(memory_job_id)
                 if memory_job and memory_job.status != "completed":
                     memory_job.status = "cancelled"
                     memory_job.next_retry_at = None
-    
+
             if created_count:
                 conversation = db.record_internal_error_conversation_after_claim(session_id)
                 if conversation:
@@ -98,7 +98,7 @@ class RecordInternalError:
             if conversation and turn_id and conversation.active_turn_id == turn_id:
                 conversation.active_turn_id = None
                 conversation.active_turn_expires_at = None
-    
+
             db.commit()
         except Exception:
             db.rollback()

@@ -9,7 +9,7 @@ from app.domain.diagnostics import InternalFeatureError, redact_diagnostic_log
 logger = logging.getLogger("services.memory_service")
 
 class RetrieveContext:
-    def retrieve_context(self, 
+    def retrieve_context(self,
         user_message: str,
         *,
         raise_on_error: bool = False,
@@ -31,7 +31,7 @@ class RetrieveContext:
         deadline = time.monotonic() + timeout_seconds
         warnings: list[str] = []
         diagnostics: list[str] = []
-    
+
         scope_future = self.retrieval_executor.submit(
             self.resolve_project_scope,
             user_message,
@@ -45,7 +45,7 @@ class RetrieveContext:
             (scope_future, route_future),
             timeout=max(deadline - time.monotonic(), 0.0),
         )
-    
+
         if scope_future.done():
             try:
                 project_scope = scope_future.result()
@@ -68,7 +68,7 @@ class RetrieveContext:
                 project_name=project_id,
                 resolution="session" if project_id else None,
             )
-    
+
         if route_future.done():
             try:
                 route = route_future.result()
@@ -80,7 +80,7 @@ class RetrieveContext:
             warnings.append("memory_router_timeout")
             diagnostics.append(f"Memory router exceeded the {timeout_seconds}s retrieval deadline.")
             route = type("RouteFallback", (), {"status": "router_failed", "keywords": [], "error": "timeout"})()
-    
+
         effective_project_id = project_scope.project_id
         query_resolution = QueryResolution(
             status=("ambiguous" if route.status == "router_failed" and self.references.reference_matches(user_message)
@@ -98,7 +98,7 @@ class RetrieveContext:
                 ),
             )
         retrieval_query = query_resolution.query
-    
+
         intent_keywords = self.retrieval.memory_intent_keywords(retrieval_query)
         deterministic_recall = self.retrieval.requires_personal_memory(retrieval_query)
         if route.status == "router_failed":
@@ -119,7 +119,7 @@ class RetrieveContext:
                 project_scope=project_scope,
                 query_resolution=query_resolution,
             )
-    
+
         keywords = []
         for keyword in [*intent_keywords, *router_keywords]:
             normalized_keyword = " ".join(str(keyword or "").lower().split())
@@ -133,16 +133,16 @@ class RetrieveContext:
         )
         if not keywords:
             keywords = self.retrieval.local_search_keywords(retrieval_query)
-    
+
         if not should_retrieve:
             return MemoryContext(retrieval_status=RetrievalStatus(router="not_needed"))
-    
+
         qdrant_results: list[dict] = []
         neo4j_results: list[str] = []
         qdrant_available = True
         neo4j_available = True
         include_historical = bool(HISTORICAL_RE.search(user_message.lower()))
-    
+
         remaining = max(deadline - time.monotonic(), 0.0)
         if remaining <= 0:
             future_qdrant = future_neo4j = None
@@ -183,7 +183,7 @@ class RetrieveContext:
                     warnings.append("semantic_memory_unavailable")
                     diagnostics.append(traceback.format_exc())
                     logger.exception("Qdrant retrieval failed; continuing with remaining context: %s", exc)
-    
+
         if future_neo4j is not None:
             if future_neo4j not in completed:
                 neo4j_available = False
@@ -203,23 +203,23 @@ class RetrieveContext:
                     logger.exception("Neo4j retrieval failed; continuing with remaining context: %s", exc)
         else:
             neo4j_available = False
-    
+
         qdrant_timed_out = future_qdrant is None
         if qdrant_timed_out:
             qdrant_available = False
-    
+
         qdrant_results = self.filter_active_vector_memories(qdrant_results)
-    
+
         if not qdrant_available and not neo4j_available:
             warnings.append("memory_backends_unavailable")
-    
+
         if raise_on_error and diagnostics:
             raise InternalFeatureError(
                 "memory_retrieval",
                 "Pengambilan konteks memori gagal atau melewati batas waktu.",
                 redact_diagnostic_log("\n\n".join(diagnostics)),
             )
-    
+
         context = MemoryContext(
             qdrant_context=qdrant_results,
             neo4j_context=neo4j_results,
@@ -240,7 +240,7 @@ class RetrieveContext:
         """Reject stale vectors even when an older Qdrant payload lacks lifecycle metadata."""
         if not items:
             return []
-    
+
         message_ids = {str(item.get("message_id")) for item in items if item.get("message_id")}
         if not message_ids:
             return []

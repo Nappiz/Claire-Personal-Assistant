@@ -17,7 +17,7 @@ class GenerateResponse:
         client = self.gateway.get_llm_client(provider)
         model_name = model or DEFAULT_MODEL_NAME
         llm_messages = self.prompts.build_chat_messages(user_message, memory_context, session_history, session_summary)
-    
+
         try:
             response, invocation_id = self.gateway.tracked_sync_completion(
                 client, purpose="chat", provider=provider, retries=self.config.LLM_MAX_RETRIES,
@@ -26,7 +26,7 @@ class GenerateResponse:
                 temperature=0.7,
                 max_tokens=self.config.CHAT_OUTPUT_MAX_TOKENS,
             )
-            
+
             usage = {
                 **self.responses.usage_values(getattr(response, "usage", None)),
                 "invocation_ids": [invocation_id],
@@ -34,7 +34,7 @@ class GenerateResponse:
                     self.responses.finish_reason_text(getattr(response.choices[0], "finish_reason", None))
                 ]}).items() if key != "type"},
             }
-            
+
             return response.choices[0].message.content, usage
         except Exception as e:
             logger.error(f"Error calling LLM API ({provider}): {e}")

@@ -8,7 +8,7 @@ logger = logging.getLogger("services.memory_service")
 class OutboxLeases:
     def claim_memory_job(self, job_id: str) -> str | None:
         """Atomically acquire one due job; a stale worker cannot finalize this lease."""
-    
+
         now = datetime.now(timezone.utc)
         legacy_lease_expired_at = now - timedelta(seconds=MEMORY_JOB_LEASE_SECONDS)
         token = str(uuid.uuid4())
@@ -36,13 +36,13 @@ class OutboxLeases:
 
     def finish_memory_job(self, job_id: str, lease_token: str, stage_errors: list[str]) -> dict | None:
         """Persist a retryable final state after one independent stage pass."""
-    
+
         db = self.persistence.open()
         try:
             job = db.finish_memory_job_current_after_claim(job_id)
             if not job or job.status == "cancelled" or job.lease_token != lease_token:
                 return self.outbox.outbox_job_data(job) if job else None
-    
+
             updates = self.outbox.finalize_updates(job, stage_errors)
             changed = db.finish_memory_job_changed(job_id, lease_token, updates)
             db.commit()

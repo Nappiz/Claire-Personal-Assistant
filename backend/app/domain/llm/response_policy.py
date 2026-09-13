@@ -44,7 +44,7 @@ class ResponsePolicy:
             return content
         if not isinstance(content, list):
             return ""
-    
+
         text_parts: list[str] = []
         for part in content:
             if isinstance(part, dict):
@@ -59,15 +59,15 @@ class ResponsePolicy:
         finish_reason = self.finish_reason_text(getattr(choice, "finish_reason", None))
         if finish_reason and finish_reason not in diagnostics["finish_reasons"]:
             diagnostics["finish_reasons"].append(finish_reason)
-    
+
         delta = getattr(choice, "delta", None)
         if delta is None:
             return
-    
+
         refusal = getattr(delta, "refusal", None)
         if refusal:
             diagnostics["refusal"] = str(refusal)[:500]
-    
+
         for tool_call in getattr(delta, "tool_calls", None) or []:
             function = getattr(tool_call, "function", None)
             name = getattr(function, "name", None)

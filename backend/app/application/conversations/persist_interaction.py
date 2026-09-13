@@ -7,7 +7,7 @@ from app.domain.memory.contracts import TurnConflictError
 logger = logging.getLogger("services.memory_service")
 
 class PersistInteraction:
-    def save_interaction(self, 
+    def save_interaction(self,
         session_id: str,
         user_message: str,
         ai_response: str,
@@ -29,7 +29,7 @@ class PersistInteraction:
     ):
         """Commit a completed turn and its outbox atomically; external memory runs later."""
         response_status, finish_reason = self.turn.normalize_completion(usage, response_status, finish_reason)
-    
+
         db = self.persistence.open()
         assistant_message_id: str | None = None
         memory_job_id: str | None = None
@@ -39,7 +39,7 @@ class PersistInteraction:
             )
             if conversation is None:
                 raise ValueError("Session was deleted before the turn could be committed")
-    
+
             msg_user = db.save_interaction_msg_user(user_message_id) if user_message_id else None
             if turn_id and msg_user is None:
                 msg_user = (
@@ -68,7 +68,7 @@ class PersistInteraction:
                 msg_user.message_type = "normal"
                 msg_user.error_details = None
                 msg_user.turn_sequence = sequence
-    
+
             msg_ai = None
             if turn_id:
                 msg_ai = (
@@ -100,14 +100,14 @@ class PersistInteraction:
                 raise TurnConflictError("A different assistant result is already committed for this turn")
             assistant_message_id = str(msg_ai.id)
             user_message_id = str(msg_user.id)
-    
+
             conversation.message_count = int(conversation.message_count or 0) + int(created_user) + int(created_assistant)
             conversation.summary_pending = int(conversation.message_count or 0) > 30
             if not turn_id or conversation.active_turn_id == turn_id:
                 conversation.active_turn_id = None
                 conversation.active_turn_expires_at = None
             conversation.updated_at = datetime.now(timezone.utc)
-    
+
             if usage and usage.get("total_tokens", 0) > 0 and created_assistant and not usage.get("invocation_ids"):
                 db.add(
                     db.new_usage(
@@ -119,7 +119,7 @@ class PersistInteraction:
                         conversation_id=session_id,
                     )
                 )
-    
+
             if ai_response != ERROR_FALLBACK_MSG:
                 memory_job = db.save_interaction_memory_job(turn_id) if turn_id else None
                 if memory_job is None:
@@ -144,7 +144,7 @@ class PersistInteraction:
                     db.add(memory_job)
                     db.flush()
                 memory_job_id = str(memory_job.id)
-    
+
             db.commit()
         except Exception:
             db.rollback()
@@ -152,7 +152,7 @@ class PersistInteraction:
             raise
         finally:
             db.close()
-    
+
         job_result = None
         if memory_job_id and process_memory:
             job_result = self.process_memory_job(memory_job_id, report_errors=report_errors)

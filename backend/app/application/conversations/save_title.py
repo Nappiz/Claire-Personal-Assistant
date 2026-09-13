@@ -12,7 +12,7 @@ class SaveTitle:
             try:
                 with self.usage_context(conversation_id=session_id, turn_id=None, job_id=None, job_attempt=None):
                     title = self.generate_session_title(first_message)
-                
+
                 conv = db.generate_and_save_title_conv(session_id)
                 if conv:
                     conv.title = title
