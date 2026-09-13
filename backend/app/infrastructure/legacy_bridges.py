@@ -4,18 +4,7 @@ from app.infrastructure.vector.qdrant_vector_store import vector_store
 from app.infrastructure.graph.neo4j_graph_store import graph_store
 from services.ai_usage_service import set_usage_context as legacy_set_usage_context, reset_usage_context as legacy_reset_usage_context
 from app.observability.correlation import correlation
-
-
-class LegacyLLMGateway:
-    @property
-    def DEFAULT_MODEL_NAME(self):
-        return llm_service.DEFAULT_MODEL_NAME
-
-    def generate_chat_response_stream(self, *args, **kwargs):
-        return llm_service.generate_chat_response_stream(*args, **kwargs)
-
-    async def analyze_internal_error(self, **kwargs):
-        return await llm_service.analyze_internal_error(**kwargs)
+from app.infrastructure.llm.composition import llm_workflows
 
 
 class LegacyMemoryWorkflow:
@@ -35,7 +24,7 @@ class LegacyMemoryWorkflow:
         return memory_service.get_session_summary(self.uow.db, session_id)
 
 
-llm_gateway = LegacyLLMGateway()
+llm_gateway = llm_workflows
 
 
 def set_usage_context(**values):
