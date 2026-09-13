@@ -1,10 +1,10 @@
-"""Compatibility facade. Remove after stages 5â€“8 migrate legacy consumers."""
+"""Compatibility facade. Remove after stages 5Ã¢â‚¬â€œ8 migrate legacy consumers."""
 from app.compatibility import install_facade
 from app.api.router import router
 from app.api import dependencies, errors, sse
 from app.api.routers import chat, conversations, projects, graph, memory, system
 from app.infrastructure import legacy_bridges as bridges
-from services import qdrant_service
+from services import qdrant_service, memory_service, llm_service
 install_facade(__name__, {
     "get_projects": (projects, "get_projects"),
     "create_project": (projects, "create_project"),
@@ -26,8 +26,6 @@ install_facade(__name__, {
     "stream_chat_endpoint": (chat, "stream_chat_endpoint"),
     "_prepare_stream_session": (dependencies, "_prepare_stream_session"),
     "SessionLocal": (dependencies, "SessionLocal"),
-    "memory_service": (bridges, "memory_service"),
-    "llm_service": (bridges, "llm_service"),
     "neo4j_client": (bridges, "graph_store"),
     "get_qdrant_stats": (qdrant_service, "get_stats"),
     "delete_memory_by_session": (qdrant_service, "delete_memory_by_session"),

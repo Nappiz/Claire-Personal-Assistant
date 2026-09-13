@@ -2,7 +2,7 @@ from app.infrastructure.llm import client_factory
 from app.infrastructure.llm.memory_completion import MemoryCompletion
 from app.infrastructure.llm.provider_serializers import ProviderSerializers
 from app.infrastructure.llm.response_normalizer import normalize_response, NormalizedStream
-from services import ai_usage_service
+from app.observability import ai_telemetry as ai_usage_service
 
 
 class OpenAICompletionGateway(MemoryCompletion, ProviderSerializers):

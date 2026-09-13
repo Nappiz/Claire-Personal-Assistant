@@ -1,5 +1,6 @@
 """Bind request-owned history/cancellation transactions, without orchestration."""
 from app.domain.memory.contracts import TurnConflictError
+from app.observability.operational_events import emit_event
 
 
 class BoundMemoryWorkflows:
@@ -9,10 +10,17 @@ class BoundMemoryWorkflows:
         self.workflows, self.uow = workflows, uow
 
     def begin_turn(self, *args, **kwargs): return self.workflows.begin_turn(*args, **kwargs)
-    def retrieve_context(self, *args, **kwargs): return self.workflows.retrieve_context(*args, **kwargs)
+    def retrieve_context(self, *args, **kwargs):
+        context = self.workflows.retrieve_context(*args, **kwargs)
+        emit_event("memory.retrieved", candidate_ids=[item.message_id for item in context.qdrant_context if item.message_id])
+        return context
     def save_interaction(self, **kwargs): return self.workflows.save_interaction(**kwargs)
     def mark_turn_status(self, *args, **kwargs): return self.workflows.mark_turn_status(*args, **kwargs)
-    def process_memory_job(self, *args, **kwargs): return self.workflows.process_memory_job(*args, **kwargs)
+    def process_memory_job(self, *args, **kwargs):
+        result = self.workflows.process_memory_job(*args, **kwargs)
+        if result:
+            emit_event("memory.job", job_id=result.get("id"), job_state=result.get("status"))
+        return result
     def process_conversation_summary(self, *args, **kwargs): return self.workflows.process_conversation_summary(*args, **kwargs)
     def generate_and_save_title(self, *args, **kwargs): return self.workflows.generate_and_save_title(*args, **kwargs)
     def record_internal_error(self, **kwargs): return self.workflows.record_internal_error(**kwargs)

@@ -9,7 +9,7 @@ from app.infrastructure.memory.retrieval_executor import RetrievalExecutor
 from app.infrastructure.llm.composition import llm_workflows
 from app.infrastructure.vector.qdrant_vector_store import vector_store
 from app.infrastructure.graph.neo4j_graph_store import graph_store
-from services.ai_usage_service import usage_context
+from app.observability.ai_telemetry import usage_context
 
 
 def create_memory_workflows(executor=None):

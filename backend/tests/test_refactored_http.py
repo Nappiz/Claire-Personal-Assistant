@@ -107,7 +107,7 @@ class RefactoredHTTPTests(TestCase):
         graph = NS(update_fact=lambda *_: {"source_message_ids": ["source-1"], "is_current": False})
         vector = Mock()
         with patch.object(bridges, "graph_store", graph), patch.object(bridges, "vector_store", vector), patch.object(
-            bridges.memory_service, "set_source_messages_memory_status", return_value=1
+            bridges.memory_workflows, "set_source_messages_memory_status", return_value=1
         ) as source_status:
             response = self.client.patch("/api/v1/memory/graph/fact/fact-1", json={"is_current": False})
         self.assertEqual(200, response.status_code)
@@ -136,9 +136,9 @@ class RefactoredHTTPTests(TestCase):
             raise TimeoutError("provider timeout")
 
         with patch.object(dependencies, "_prepare_stream_session", return_value=("s-1", False, [], "", None, None, "turn-1", {"completed": False})), patch.object(
-            bridges.memory_service, "retrieve_context", return_value=MemoryContext()
-        ), patch.object(bridges.llm_service, "generate_chat_response_stream", stream), patch.object(
-            bridges.memory_service, "mark_turn_status"
+            bridges.memory_workflows, "retrieve_context", return_value=MemoryContext()
+        ), patch.object(bridges.llm_workflows, "generate_chat_response_stream", stream), patch.object(
+            bridges.memory_workflows, "mark_turn_status"
         ) as status:
             response = self.client.post("/api/v1/chat/stream", json={"message": "Hello"})
         import json

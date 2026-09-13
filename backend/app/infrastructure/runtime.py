@@ -10,9 +10,15 @@ from app.workers.maintenance_worker import memory_maintenance_task
 from app.workers.memory_outbox_worker import memory_outbox_retry_task
 from app.workers.summary_worker import conversation_summary_retry_task
 from app.workers.vector_reindex_worker import vector_memory_reindex_task
+from app.observability.operational_events import emit_event
 
 
 def create_worker_tasks(logger):
+    def due_jobs(**kwargs):
+        results = memory_workflows.process_due_memory_jobs(**kwargs)
+        for result in results:
+            emit_event("memory.job", job_id=result.get("id"), job_state=result.get("status"))
+        return results
     def maintenance():
         return run_memory_maintenance_once(
             SessionLocal, lambda db, key: SQLAlchemySettingsRepository(db).get(key),
@@ -20,7 +26,7 @@ def create_worker_tasks(logger):
             graph_store, logger)
     return [
         asyncio.create_task(memory_maintenance_task(maintenance, logger)),
-        asyncio.create_task(memory_outbox_retry_task(memory_workflows.process_due_memory_jobs, logger)),
+        asyncio.create_task(memory_outbox_retry_task(due_jobs, logger)),
         asyncio.create_task(conversation_summary_retry_task(memory_workflows.process_due_summaries, logger)),
         asyncio.create_task(vector_memory_reindex_task(
             memory_workflows.reindex_vector_memory_from_outbox,
