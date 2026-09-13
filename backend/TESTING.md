@@ -20,3 +20,15 @@ Baseline before extraction: **163 tests, all passed** (161 existing tests and
 two API/SSE contract tests). Initial runner-only failures in logging, asyncio
 socketpair isolation, fixture chunk placement, and Windows resource cleanup
 were corrected before application extraction.
+
+Architecture and extraction checks (parse source only):
+
+```powershell
+.\backend\venv\Scripts\python.exe backend\scripts\check_architecture.py --baseline-ref refactor-backend-baseline
+.\backend\venv\Scripts\python.exe backend\scripts\verify_extraction.py
+```
+
+The graph golden fixture was captured from the original Git baseline using a
+deterministic recording driver. It verifies ordered Cypher, parameters, results,
+and transaction count. These fixtures do not replace a live Neo4j integration
+suite; the stage-0â€“4 refactor is verified offline without altering local stores.
