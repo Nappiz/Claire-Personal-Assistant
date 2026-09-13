@@ -1,0 +1,15 @@
+fastapi
+uvicorn
+neo4j
+qdrant-client
+pywin32; sys_platform == "win32"
+sqlalchemy
+alembic
+pydantic
+pydantic-settings
+sentence-transformers
+openai
+httpx
+apscheduler
+python-dotenv
+tzdata
