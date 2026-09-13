@@ -1,18 +1,6 @@
 from __future__ import annotations
-import hashlib
-import json
 import logging
-import math
-import os
-import re
-import time
 import uuid
-from datetime import datetime, timezone
-from typing import Literal
-from configs.settings import settings
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, FieldCondition, Filter, MatchValue, IsEmptyCondition, PointStruct, HasIdCondition, VectorParams
-from . import state
 
 logger = logging.getLogger(__name__)
 from . import embedding_encoder

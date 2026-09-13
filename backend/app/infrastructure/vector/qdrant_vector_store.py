@@ -2,16 +2,11 @@ from __future__ import annotations
 import hashlib
 import json
 import logging
-import math
-import os
-import re
-import time
 import uuid
 from datetime import datetime, timezone
 from typing import Literal
 from configs.settings import settings
-from qdrant_client import QdrantClient
-from qdrant_client.http.models import Distance, FieldCondition, Filter, MatchValue, IsEmptyCondition, PointStruct, HasIdCondition, VectorParams
+from qdrant_client.http.models import FieldCondition, Filter, MatchValue, PointStruct, HasIdCondition
 from . import state
 
 logger = logging.getLogger(__name__)
@@ -224,31 +219,33 @@ def delete_memory_by_session(session_id: str) -> None:
 
 class QdrantVectorStore:
     """Concrete implementation of the VectorStore port."""
-    def save_memory(self, *args, **kwargs):
-        return save_memory(*args, **kwargs)
+    def save_memory(self, text: str, metadata: dict | None = None, dedup_key: str | None = None, point_id: str | None = None) -> str:
+        return save_memory(text, metadata, dedup_key, point_id)
 
-    def reconcile_memory(self, *args, **kwargs):
-        return reconcile_memory(*args, **kwargs)
+    def reconcile_memory(self, text: str, metadata: dict, *, point_id: str) -> bool:
+        return reconcile_memory(text, metadata, point_id=point_id)
 
-    def search_memory(self, *args, **kwargs):
-        return retrieval_ranker.search_memory(*args, **kwargs)
+    def search_memory(self, query: str, limit: int = 3, *, project_id: str | None = None) -> list[dict]:
+        return retrieval_ranker.search_memory(query, limit, project_id=project_id)
 
-    def search_project_memory_candidates(self, *args, **kwargs):
-        return retrieval_ranker.search_project_memory_candidates(*args, **kwargs)
+    def search_project_memory_candidates(self, query: str, limit: int = 12) -> list[dict]:
+        return retrieval_ranker.search_project_memory_candidates(query, limit)
 
-    def set_memories_status(self, *args, **kwargs):
+    def set_memories_status(self, *args, **kwargs) -> int:
+        # Preserve legacy call shapes, including patched compensation callbacks.
+        # The implementation remains the single owner of argument validation.
         return set_memories_status(*args, **kwargs)
 
-    def delete_memory_by_session(self, *args, **kwargs):
-        return delete_memory_by_session(*args, **kwargs)
+    def delete_memory_by_session(self, session_id: str) -> None:
+        return delete_memory_by_session(session_id)
 
-    def get_stats(self):
+    def get_stats(self) -> dict:
         return vector_maintenance.get_stats()
 
-    def warmup_embedding_model(self, **kwargs):
-        return vector_maintenance.warmup_embedding_model(**kwargs)
+    def warmup_embedding_model(self, *, force_retry: bool = False) -> dict:
+        return vector_maintenance.warmup_embedding_model(force_retry=force_retry)
 
-    def embedding_signature(self):
+    def embedding_signature(self) -> str:
         return embedding_encoder.embedding_signature()
 
 
