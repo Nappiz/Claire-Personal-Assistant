@@ -4,13 +4,18 @@ from app.infrastructure.persistence.memory.conversations_read_history import Rea
 from app.infrastructure.persistence.memory.conversations_begin_turn import BeginTurnQueries
 from app.infrastructure.persistence.memory.conversations_complete_turn import CompleteTurnQueries
 from app.infrastructure.persistence.memory.conversations_persist_interaction import PersistInteractionQueries
+from app.infrastructure.persistence.memory.memory_outbox_snapshots import OutboxSnapshotsQueries
+from app.infrastructure.persistence.memory.memory_outbox_leases import OutboxLeasesQueries
+from app.infrastructure.persistence.memory.memory_process_outbox_job import ProcessOutboxJobQueries
+from app.infrastructure.persistence.memory.memory_retry_due_jobs import RetryDueJobsQueries
+from app.infrastructure.persistence.memory.conversations_cancel_conversation_jobs import CancelConversationJobsQueries
 from models.message import Message
 from models.conversation import Conversation
 from models.memory_outbox import MemoryOutbox
 from models.llm_usage import LLMUsageLog
 
 
-class MemoryTransaction(ResolveProjectScopeQueries, RetrieveContextQueries, ReadHistoryQueries, BeginTurnQueries, CompleteTurnQueries, PersistInteractionQueries):
+class MemoryTransaction(ResolveProjectScopeQueries, RetrieveContextQueries, ReadHistoryQueries, BeginTurnQueries, CompleteTurnQueries, PersistInteractionQueries, OutboxSnapshotsQueries, OutboxLeasesQueries, ProcessOutboxJobQueries, RetryDueJobsQueries, CancelConversationJobsQueries):
     """SQLAlchemy-backed UOW; query capabilities stay in focused adapter mixins."""
     def __init__(self, db, config):
         self.db, self.config = db, config

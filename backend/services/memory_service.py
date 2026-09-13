@@ -78,83 +78,8 @@ _VAGUE_PROJECT_REFERENCE_RE = re.compile(
 
 
 
-def _vector_assertion_evidence(extracted: dict | None) -> tuple[str, list[dict]]:
-    """Render only validated positive assertions for semantic memory.
-
-    SQLite retains the raw conversation. Qdrant receives compact, resolved graph
-    evidence so questions, quotations, hypotheticals, and elliptical chatter are
-    not mislabeled as factual assertions merely because the user authored them.
-    """
-    data = extracted if isinstance(extracted, dict) else {}
-    nodes = {
-        str(node.get("id")): node
-        for node in data.get("nodes", [])
-        if isinstance(node, dict) and node.get("id") and node.get("name")
-    }
-    spans: list[dict] = []
-    rendered: list[str] = []
-    seen: set[str] = set()
-    evidence_offset = 0
-    for edge in data.get("edges", []):
-        if not isinstance(edge, dict):
-            continue
-        if float(edge.get("confidence", 1.0) or 0.0) < settings.MEMORY_FACT_CONFIDENCE_THRESHOLD:
-            continue
-        relation = " ".join(str(edge.get("relation") or "").replace("_", " ").split()).lower()
-        if not relation or relation == "belongs to":
-            continue
-        source = nodes.get(str(edge.get("source")))
-        target = nodes.get(str(edge.get("target")))
-        if not source or not target:
-            continue
-        if min(float(source.get("confidence", 1.0)), float(target.get("confidence", 1.0))) < settings.MEMORY_FACT_CONFIDENCE_THRESHOLD:
-            continue
-        def resolved_name(node: dict) -> str:
-            name = str(node["name"])
-            context = str(node.get("identity_context") or "").strip()
-            if str(node.get("label") or "").lower() == "person" and context:
-                return f"{name} ({context})"
-            return name
-        assertion = " ".join(f"{resolved_name(source)} {relation} {resolved_name(target)}".split())
-        fingerprint = assertion.casefold()
-        if fingerprint in seen:
-            continue
-        seen.add(fingerprint)
-        rendered.append(assertion)
-        spans.append({
-            "text": assertion,
-            "modality": "asserted_fact",
-            "polarity": "positive",
-            "source_ref": str(edge.get("source")),
-            "target_ref": str(edge.get("target")),
-            "relation": str(edge.get("relation") or "").upper(),
-            "span_start": evidence_offset,
-            "span_end": evidence_offset + len(assertion),
-        })
-        evidence_offset += len(assertion) + 2
-    return ". ".join(rendered), spans
 
 
-def set_source_messages_memory_status(message_ids: list[str], status: str) -> int:
-    if status not in {"active", "inactive"}:
-        raise ValueError("Unsupported memory status")
-    clean_ids = {str(item) for item in message_ids if item}
-    if not clean_ids:
-        return 0
-    from configs.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        count = db.query(Message).filter(Message.id.in_(clean_ids)).update(
-            {Message.memory_status: status}, synchronize_session=False
-        )
-        db.commit()
-        return count
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
 
 
 
@@ -167,569 +92,34 @@ _MEMORY_RETRY_MAX_SECONDS = 60 * 60
 _MEMORY_JOB_LEASE_SECONDS = 5 * 60
 
 
-def _outbox_job_data(job: MemoryOutbox) -> dict:
-    """Return only operational metadata; never expose chat payload by default."""
-    return {
-        "id": job.id,
-        "conversation_id": job.conversation_id,
-        "user_message_id": job.user_message_id,
-        "status": job.status,
-        "vector_saved": bool(job.vector_saved),
-        "extraction_completed": bool(job.extraction_completed),
-        "graph_saved": bool(job.graph_saved),
-        "attempts": job.attempts,
-        "last_error": job.last_error,
-        "next_retry_at": job.next_retry_at,
-        "completed_at": job.completed_at,
-        "created_at": job.created_at,
-        "updated_at": job.updated_at,
-    }
 
 
-def _get_memory_job_snapshot(job_id: str, lease_token: str | None = None) -> dict | None:
-    from configs.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        job = db.get(MemoryOutbox, job_id)
-        if not job or (lease_token is not None and job.lease_token != lease_token):
-            return None
-        return {
-            "id": job.id,
-            "conversation_id": job.conversation_id,
-            "user_message_id": job.user_message_id,
-            "user_message": job.user_message,
-            "assistant_response": job.assistant_response,
-            "session_history": list(job.session_history or []),
-            "neo4j_context": list(job.neo4j_context or []),
-            "extracted_knowledge": job.extracted_knowledge,
-            "project_id": job.project_id,
-            "project_name": job.project_name,
-            "scope": job.scope or "global",
-            "vector_saved": bool(job.vector_saved),
-            "extraction_completed": bool(job.extraction_completed),
-            "graph_saved": bool(job.graph_saved),
-            "status": job.status,
-            "attempts": job.attempts,
-            "created_at": job.created_at,
-            "event_at": job.event_at or job.created_at,
-            "lease_token": job.lease_token,
-        }
-    finally:
-        db.close()
 
 
-def _update_memory_job(job_id: str, *, expected_lease_token: str | None = None, **updates) -> dict | None:
-    from configs.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        if expected_lease_token is not None and hasattr(db, "execute"):
-            result = db.query(MemoryOutbox).filter(
-                MemoryOutbox.id == job_id,
-                MemoryOutbox.lease_token == expected_lease_token,
-            ).update(updates, synchronize_session=False)
-            db.commit()
-            if result != 1:
-                return None
-            job = db.get(MemoryOutbox, job_id)
-            return _outbox_job_data(job) if job else None
-        job = db.get(MemoryOutbox, job_id)
-        if not job or (expected_lease_token is not None and job.lease_token != expected_lease_token):
-            return None
-        for field, value in updates.items():
-            setattr(job, field, value)
-        db.commit()
-        db.refresh(job)
-        return _outbox_job_data(job)
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
 
 
-def _memory_job_is_active(job_id: str, lease_token: str) -> bool:
-    """Stop workers that race with a user deleting the source conversation."""
-    from configs.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        job = db.query(MemoryOutbox).filter(
-            MemoryOutbox.id == job_id,
-            MemoryOutbox.lease_token == lease_token,
-        ).first()
-        if (
-            not job
-            or job.lease_token != lease_token
-            or job.status != "processing"
-            or not job.lease_expires_at
-        ):
-            return False
-        lease_expires_at = job.lease_expires_at
-        if lease_expires_at.tzinfo is None:
-            lease_expires_at = lease_expires_at.replace(tzinfo=timezone.utc)
-        if lease_expires_at <= datetime.now(timezone.utc):
-            return False
-        return (
-            db.query(Conversation.id)
-            .filter(
-                Conversation.id == job.conversation_id,
-                Conversation.deleted_at.is_(None),
-            )
-            .first()
-            is not None
-        )
-    finally:
-        db.close()
 
 
-def _finish_memory_job(job_id: str, lease_token: str, stage_errors: list[str]) -> dict | None:
-    """Persist a retryable final state after one independent stage pass."""
-    from configs.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        job = db.get(MemoryOutbox, job_id)
-        if not job or job.status == "cancelled" or job.lease_token != lease_token:
-            return _outbox_job_data(job) if job else None
-
-        if job.vector_saved and job.extraction_completed and job.graph_saved:
-            updates = {
-                "status": "completed",
-                "last_error": None,
-                "next_retry_at": None,
-                "completed_at": datetime.now(timezone.utc),
-                "lease_token": None,
-                "lease_expires_at": None,
-            }
-        else:
-            delay_seconds = min(
-                _MEMORY_RETRY_BASE_SECONDS * (2 ** max(job.attempts - 1, 0)),
-                _MEMORY_RETRY_MAX_SECONDS,
-            )
-            updates = {
-                "status": "failed",
-                "last_error": " | ".join(stage_errors)[:4000] or "Memory job did not complete all stages",
-                "next_retry_at": datetime.now(timezone.utc) + timedelta(seconds=delay_seconds),
-                "lease_token": None,
-                "lease_expires_at": None,
-            }
-        changed = db.query(MemoryOutbox).filter(
-            MemoryOutbox.id == job_id,
-            MemoryOutbox.lease_token == lease_token,
-        ).update(updates, synchronize_session=False)
-        db.commit()
-        if changed != 1:
-            current = db.get(MemoryOutbox, job_id)
-            return _outbox_job_data(current) if current else None
-        current = db.get(MemoryOutbox, job_id)
-        return _outbox_job_data(current) if current else None
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
 
 
-def _claim_memory_job(job_id: str) -> str | None:
-    """Atomically acquire one due job; a stale worker cannot finalize this lease."""
-    from configs.database import SessionLocal
-
-    now = datetime.now(timezone.utc)
-    legacy_lease_expired_at = now - timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS)
-    token = str(uuid.uuid4())
-    db = SessionLocal()
-    try:
-        if not hasattr(db, "execute"):
-            job = db.get(MemoryOutbox, job_id)
-            if not job or job.status in {"completed", "cancelled"}:
-                return None
-            job.status = "processing"
-            job.lease_token = token
-            job.lease_expires_at = now + timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS)
-            job.attempts += 1
-            job.last_error = None
-            db.commit()
-            return token
-        eligible = or_(
-            MemoryOutbox.status == "pending",
-            and_(
-                MemoryOutbox.status == "failed",
-                or_(MemoryOutbox.next_retry_at.is_(None), MemoryOutbox.next_retry_at <= now),
-            ),
-            and_(
-                MemoryOutbox.status == "processing",
-                or_(
-                    MemoryOutbox.lease_expires_at <= now,
-                    and_(
-                        MemoryOutbox.lease_expires_at.is_(None),
-                        MemoryOutbox.updated_at <= legacy_lease_expired_at,
-                    ),
-                ),
-            ),
-        )
-        result = db.execute(
-            update(MemoryOutbox)
-            .where(MemoryOutbox.id == job_id, eligible)
-            .values(
-                status="processing",
-                lease_token=token,
-                lease_expires_at=now + timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS),
-                attempts=MemoryOutbox.attempts + 1,
-                last_error=None,
-                updated_at=now,
-            )
-        )
-        db.commit()
-        return token if result.rowcount == 1 else None
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
 
 
-def _cancel_claim(job_id: str, lease_token: str, reason: str) -> dict | None:
-    return _update_memory_job(
-        job_id,
-        expected_lease_token=lease_token,
-        status="cancelled",
-        next_retry_at=None,
-        lease_token=None,
-        lease_expires_at=None,
-        last_error=reason,
-    )
 
 
-def _compensate_deleted_conversation(snapshot: dict) -> None:
-    """Remove writes that crossed a deletion tombstone after an external call began."""
-    delete_memory_by_session = vector_store.delete_memory_by_session
-
-    errors: list[Exception] = []
-    for operation in (
-        lambda: delete_memory_by_session(snapshot["conversation_id"]),
-        lambda: neo4j_client.remove_conversation_provenance(
-            snapshot["conversation_id"], [snapshot["user_message_id"]]
-        ),
-    ):
-        try:
-            operation()
-        except Exception as exc:
-            errors.append(exc)
-            logger.exception("Compensating memory cleanup failed")
-    if errors:
-        raise RuntimeError("Conversation was deleted and compensating cleanup was incomplete")
 
 
-def _conversation_is_deleted(conversation_id: str) -> bool:
-    from configs.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        conversation = db.get(Conversation, conversation_id)
-        return conversation is None or conversation.deleted_at is not None
-    finally:
-        db.close()
 
 
-def _leased_memory_job_snapshot(job_id: str, lease_token: str) -> dict | None:
-    """Small adapter retained for simple test doubles while enforcing leases in production."""
-    try:
-        return _get_memory_job_snapshot(job_id, lease_token)
-    except TypeError:
-        return _get_memory_job_snapshot(job_id)
 
 
-def process_memory_job(job_id: str, *, report_errors: bool = False) -> dict | None:
-    """Attempt every unfinished memory stage without coupling their failures.
-
-    SQLite is the durable source of truth for this job. Qdrant and Neo4j are
-    independent stores, so a failed vector upsert must not prevent extraction
-    and graph persistence, and vice versa. The same job ID is reused as the
-    Qdrant point ID, making a retry idempotent for the vector stage.
-    """
-    lease_token = _claim_memory_job(job_id)
-    if lease_token is None:
-        from configs.database import SessionLocal
-        db = SessionLocal()
-        try:
-            job = db.get(MemoryOutbox, job_id)
-            return _outbox_job_data(job) if job else None
-        finally:
-            db.close()
-
-    snapshot = _leased_memory_job_snapshot(job_id, lease_token)
-    if not snapshot or not _memory_job_is_active(job_id, lease_token):
-        return _cancel_claim(job_id, lease_token, "Source conversation is deleted or lease was lost")
-
-    stage_errors: list[str] = []
-    reportable_error_logs: list[str] = []
-    reportable_operation: str | None = None
-
-    def finish_result() -> dict | None:
-        result = _finish_memory_job(job_id, lease_token, stage_errors)
-        if report_errors and reportable_error_logs:
-            result = dict(result or {})
-            result["reportable_operation"] = reportable_operation or "memory_pipeline"
-            result["reportable_error_log"] = redact_diagnostic_log(
-                "\n\n".join(reportable_error_logs)
-            )
-        return result
-
-    # Validate extraction first in a user-facing strict run. This prevents a
-    # malformed extractor result from being written to another memory store.
-    if not snapshot["extraction_completed"]:
-        try:
-            with usage_context(conversation_id=snapshot["conversation_id"], turn_id=job_id,
-                               job_id=job_id, job_attempt=snapshot.get("attempts")):
-                extracted_data = extract_knowledge(
-                    snapshot["user_message"],
-                    neo4j_context=snapshot["neo4j_context"],
-                    session_history=snapshot["session_history"],
-                    raise_on_error=True,
-                    project_id=snapshot.get("project_id"),
-                    project_name=snapshot.get("project_name"),
-                    event_at=snapshot.get("event_at"),
-                )
-            _update_memory_job(
-                job_id,
-                expected_lease_token=lease_token,
-                extracted_knowledge=extracted_data,
-                extraction_completed=True,
-            )
-        except Exception as exc:
-            logger.exception("Memory job %s failed during knowledge extraction", job_id)
-            stage_errors.append(f"extraction: {exc}")
-            if report_errors and not isinstance(exc, MemoryLLMUnavailableError):
-                reportable_operation = reportable_operation or "knowledge_extraction"
-                reportable_error_logs.append(traceback.format_exc())
-
-    if report_errors and reportable_error_logs:
-        return finish_result()
-
-    snapshot = _leased_memory_job_snapshot(job_id, lease_token)
-    if not snapshot or not _memory_job_is_active(job_id, lease_token):
-        return _cancel_claim(job_id, lease_token, "Source conversation is deleted or lease was lost")
-
-    if (
-        snapshot["extraction_completed"]
-        and not snapshot["vector_saved"]
-        and _memory_job_is_active(job_id, lease_token)
-    ):
-        try:
-            assertion_text, assertion_spans = _vector_assertion_evidence(
-                snapshot.get("extracted_knowledge")
-            )
-            if assertion_text:
-                save_memory(
-                    assertion_text,
-                    {
-                        "session_id": snapshot["conversation_id"],
-                        "message_id": snapshot["user_message_id"],
-                        "memory_job_id": job_id,
-                        "source_role": "user",
-                        "epistemic_status": "user_assertion",
-                        "assertion_spans": assertion_spans,
-                        "modality": "asserted_fact",
-                        "polarity": "positive",
-                        "stored_at": snapshot["created_at"].isoformat() if snapshot.get("created_at") else None,
-                        "event_at": snapshot["event_at"].isoformat() if snapshot.get("event_at") else None,
-                        "memory_status": "active",
-                        "project_id": snapshot.get("project_id"),
-                        "scope": snapshot.get("scope") or "global",
-                    },
-                    point_id=job_id,
-                )
-            else:
-                logger.info("Memory job %s has no positive assertion for vector indexing", job_id)
-            if not _memory_job_is_active(job_id, lease_token):
-                if _conversation_is_deleted(snapshot["conversation_id"]):
-                    _compensate_deleted_conversation(snapshot)
-                return _cancel_claim(job_id, lease_token, "Conversation deleted during vector write")
-            _update_memory_job(job_id, expected_lease_token=lease_token, vector_saved=True)
-        except Exception as exc:
-            logger.exception("Memory job %s failed during Qdrant upsert", job_id)
-            stage_errors.append(f"vector: {exc}")
-            if report_errors:
-                reportable_operation = reportable_operation or "vector_memory_write"
-                reportable_error_logs.append(traceback.format_exc())
-
-    if report_errors and reportable_error_logs:
-        return finish_result()
-
-    snapshot = _leased_memory_job_snapshot(job_id, lease_token)
-    if not snapshot or not _memory_job_is_active(job_id, lease_token):
-        return _cancel_claim(job_id, lease_token, "Source conversation is deleted or lease was lost")
-
-    if snapshot["extraction_completed"] and not snapshot["graph_saved"]:
-        try:
-            extracted_data = snapshot["extracted_knowledge"] or {"nodes": [], "edges": [], "retractions": []}
-            nodes = extracted_data.get("nodes", [])
-            edges = extracted_data.get("edges", [])
-            retractions = extracted_data.get("retractions", [])
-            graph_result = {}
-            if nodes or edges or retractions:
-                graph_result = neo4j_client.merge_knowledge(
-                    nodes,
-                    edges,
-                    retractions=retractions,
-                    source_conversation_id=snapshot["conversation_id"],
-                    source_message_id=snapshot["user_message_id"],
-                    project_id=snapshot.get("project_id"),
-                    project_name=snapshot.get("project_name"),
-                    event_id=job_id,
-                    event_at=snapshot.get("event_at"),
-                )
-            if not _memory_job_is_active(job_id, lease_token):
-                if _conversation_is_deleted(snapshot["conversation_id"]):
-                    _compensate_deleted_conversation(snapshot)
-                return _cancel_claim(job_id, lease_token, "Conversation deleted during graph write")
-            invalidated_ids = list((graph_result or {}).get("invalidated_source_message_ids") or [])
-            if invalidated_ids:
-                set_memories_status = vector_store.set_memories_status
-
-                set_source_messages_memory_status(invalidated_ids, "inactive")
-                set_memories_status(
-                    invalidated_ids,
-                    status="inactive",
-                    event_at=snapshot.get("event_at"),
-                )
-            _update_memory_job(job_id, expected_lease_token=lease_token, graph_saved=True)
-        except Exception as exc:
-            logger.exception("Memory job %s failed during Neo4j merge", job_id)
-            stage_errors.append(f"graph: {exc}")
-            if report_errors:
-                reportable_operation = reportable_operation or "knowledge_graph_write"
-                reportable_error_logs.append(traceback.format_exc())
-
-    return finish_result()
 
 
-def process_due_memory_jobs(limit: int = 25) -> list[dict]:
-    """Retry durable jobs after a restart or exponential-backoff delay."""
-    from configs.database import SessionLocal
-
-    safe_limit = min(max(int(limit), 1), 100)
-    now = datetime.now(timezone.utc)
-    legacy_lease_expired_at = now - timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS)
-    db = SessionLocal()
-    try:
-        job_ids = [
-            row[0]
-            for row in db.query(MemoryOutbox.id)
-            .filter(
-                or_(
-                    MemoryOutbox.status == "pending",
-                    and_(
-                        MemoryOutbox.status == "failed",
-                        or_(MemoryOutbox.next_retry_at.is_(None), MemoryOutbox.next_retry_at <= now),
-                    ),
-                    and_(
-                        MemoryOutbox.status == "processing",
-                        or_(
-                            MemoryOutbox.lease_expires_at <= now,
-                            and_(
-                                MemoryOutbox.lease_expires_at.is_(None),
-                                MemoryOutbox.updated_at <= legacy_lease_expired_at,
-                            ),
-                        ),
-                    ),
-                )
-            )
-            .order_by(MemoryOutbox.created_at.asc())
-            .limit(safe_limit)
-            .all()
-        ]
-    finally:
-        db.close()
-
-    results = []
-    for job_id in job_ids:
-        try:
-            result = process_memory_job(job_id)
-            if result:
-                results.append(result)
-        except Exception:
-            logger.exception("Unexpected failure while retrying memory job %s", job_id)
-    return results
 
 
-def list_memory_jobs(limit: int = 50) -> list[dict]:
-    """List job health for an authenticated operator without exposing messages."""
-    from configs.database import SessionLocal
-
-    safe_limit = min(max(int(limit), 1), 100)
-    db = SessionLocal()
-    try:
-        jobs = (
-            db.query(MemoryOutbox)
-            .order_by(MemoryOutbox.updated_at.desc())
-            .limit(safe_limit)
-            .all()
-        )
-        return [_outbox_job_data(job) for job in jobs]
-    finally:
-        db.close()
 
 
-def retry_memory_job(job_id: str) -> dict | None:
-    """Make an unfinished job eligible for immediate processing again."""
-    from configs.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        job = db.get(MemoryOutbox, job_id)
-        if not job:
-            return None
-        if job.status in {"completed", "cancelled"}:
-            raise ValueError(f"Cannot retry a {job.status} memory job")
-        if job.status == "processing" and job.lease_expires_at:
-            lease_expires_at = job.lease_expires_at
-            if lease_expires_at.tzinfo is None:
-                lease_expires_at = lease_expires_at.replace(tzinfo=timezone.utc)
-            if lease_expires_at > datetime.now(timezone.utc):
-                raise ValueError("Cannot retry a memory job with an active lease")
-        elif job.status == "processing":
-            updated_at = job.updated_at
-            if updated_at.tzinfo is None:
-                updated_at = updated_at.replace(tzinfo=timezone.utc)
-            if updated_at > datetime.now(timezone.utc) - timedelta(seconds=_MEMORY_JOB_LEASE_SECONDS):
-                raise ValueError("Cannot retry a recently processing memory job")
-        job.status = "pending"
-        job.next_retry_at = datetime.now(timezone.utc)
-        job.last_error = None
-        job.lease_token = None
-        job.lease_expires_at = None
-        db.commit()
-        db.refresh(job)
-        return _outbox_job_data(job)
-    except Exception:
-        db.rollback()
-        raise
-    finally:
-        db.close()
 
 
-def cancel_memory_jobs_for_conversation(session_id: str, db: Session) -> int:
-    """Prevent queued work from recreating memory after a session is deleted."""
-    return (
-        db.query(MemoryOutbox)
-        .filter(
-            MemoryOutbox.conversation_id == session_id,
-            MemoryOutbox.status.in_(["pending", "processing", "failed"]),
-        )
-        .update(
-            {
-                MemoryOutbox.status: "cancelled",
-                MemoryOutbox.next_retry_at: None,
-                MemoryOutbox.last_error: "Source conversation deleted",
-                MemoryOutbox.lease_token: None,
-                MemoryOutbox.lease_expires_at: None,
-            },
-            synchronize_session=False,
-        )
-    )
 
 
 
@@ -1117,7 +507,8 @@ def generate_and_save_title(session_id: str, first_message: str):
 from app.infrastructure.memory.composition import create_memory_workflows
 from app.compatibility import install_facade
 memory_workflows = create_memory_workflows(_MEMORY_RETRIEVAL_EXECUTOR)
-memory_workflows.process_memory_job = process_memory_job
+_vector_assertion_evidence = memory_workflows.assertion.vector_assertion_evidence
+
 
 install_facade(__name__, {
     "_resolve_project_scope": (memory_workflows, "resolve_project_scope"),
@@ -1128,15 +519,34 @@ install_facade(__name__, {
     "begin_turn": (memory_workflows, "begin_turn"),
     "mark_turn_status": (memory_workflows, "mark_turn_status"),
     "save_interaction": (memory_workflows, "save_interaction"),
+    "_get_memory_job_snapshot": (memory_workflows, "get_memory_job_snapshot"),
+    "_update_memory_job": (memory_workflows, "update_memory_job"),
+    "_memory_job_is_active": (memory_workflows, "memory_job_is_active"),
+    "_conversation_is_deleted": (memory_workflows, "conversation_is_deleted"),
+    "_leased_memory_job_snapshot": (memory_workflows, "leased_memory_job_snapshot"),
+    "_claim_memory_job": (memory_workflows, "claim_memory_job"),
+    "_finish_memory_job": (memory_workflows, "finish_memory_job"),
+    "_cancel_claim": (memory_workflows, "cancel_claim"),
+    "process_memory_job": (memory_workflows, "process_memory_job"),
+    "_compensate_deleted_conversation": (memory_workflows, "compensate_deleted_conversation"),
+    "set_source_messages_memory_status": (memory_workflows, "set_source_messages_memory_status"),
+    "process_due_memory_jobs": (memory_workflows, "process_due_memory_jobs"),
+    "list_memory_jobs": (memory_workflows, "list_memory_jobs"),
+    "retry_memory_job": (memory_workflows, "retry_memory_job"),
+    "cancel_memory_jobs_for_conversation": (memory_workflows, "cancel_memory_jobs_for_conversation"),
     "_normalized_text": (memory_workflows.scope, "normalized_text"),
     "_mentions_project_name": (memory_workflows.scope, "mentions_project_name"),
     "_is_standalone_assistant_question": (memory_workflows.retrieval, "is_standalone_assistant_question"),
     "_memory_intent_keywords": (memory_workflows.retrieval, "memory_intent_keywords"),
     "_requires_personal_memory": (memory_workflows.retrieval, "requires_personal_memory"),
     "_local_search_keywords": (memory_workflows.retrieval, "local_search_keywords"),
+    "_vector_assertion_evidence": (memory_workflows.assertion, "vector_assertion_evidence"),
+    "_outbox_job_data": (memory_workflows.outbox, "outbox_job_data"),
+    "save_memory": (memory_workflows, "save_memory"),
     "search_memory": (memory_workflows, "search_memory"),
     "search_project_memory_candidates": (memory_workflows, "search_project_memory_candidates"),
     "route_memory_query": (memory_workflows, "route_memory_query"),
+    "extract_knowledge": (memory_workflows, "extract_knowledge"),
     "_submit_retrieval": (memory_workflows.retrieval_executor, "submit"),
     "neo4j_client": (memory_workflows, "graph"),
     "vector_store": (memory_workflows, "vector"),
