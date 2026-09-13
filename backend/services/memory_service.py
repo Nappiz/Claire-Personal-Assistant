@@ -40,58 +40,10 @@ _MEMORY_RETRIEVAL_EXECUTOR = concurrent.futures.ThreadPoolExecutor(
 )
 
 
-def _submit_retrieval(function, *args, **kwargs):
-    return _MEMORY_RETRIEVAL_EXECUTOR.submit(copy_context().run, function, *args, **kwargs)
 
 
-def _is_standalone_assistant_question(user_message: str) -> bool:
-    """Identify questions about Claire's general identity, not user memory."""
-    normalized = " ".join(user_message.lower().split())
-    refers_to_claire = bool(re.search(r"\b(kamu|mu|lo|claire)\b", normalized))
-    asks_about_creator = bool(
-        re.search(r"\b(siapa|apa)\b.*\b(nyiptain|menciptakan|pencipta)\b", normalized)
-        or re.search(r"\b(siapa|apa)\b.*\b(bikin|buat)\s+(?:kamu|claire)\s*\??$", normalized)
-    )
-    asks_general_identity = bool(re.search(r"\b(kamu|claire)\s+(?:itu\s+)?(?:siapa|apa)\b", normalized))
-    return refers_to_claire and (asks_about_creator or asks_general_identity)
 
 
-def _memory_intent_keywords(user_message: str) -> list[str]:
-    """Add deterministic relation hints for common personal-memory questions.
-
-    The LLM router often reduces Indonesian questions such as ``aku kerja di
-    mana`` to only ``nafiz``. Every fact sourced by Nafiz then has the same
-    lexical score and the desired relation can fall outside Neo4j's per-keyword
-    limit. Relation hints use the normalized Cypher relationship names, so the
-    intended fact gets its own exact lookup.
-    """
-    normalized = " ".join(str(user_message or "").lower().split())
-    relation_rules = (
-        (r"\b(pacar(?:ku|nya)?|pasangan(?:ku|nya)?|jadian|dating)\b", ["dating", "dating since"]),
-        (r"\b(kerja|bekerja|magang|kantor|pekerjaan(?:ku|nya)?)\b", ["works at", "works as"]),
-        (r"\b(tanggal lahir|lahir|ulang tahun|ultah)\b", ["born on", "born in"]),
-        (r"\b(kuliah|kampus|mahasiswa|jurusan|semester)\b", ["studied at"]),
-        (r"\b(rumah(?:ku|nya)?|tinggal|domisili)\b", ["lives in"]),
-        (r"\b(asal|berasal)\b", ["originates from"]),
-        (r"\b(suka|favorit|kesukaan)\b", ["likes"]),
-        (r"\b(alergi)\b", ["allergic to"]),
-        (r"\b(punya|memiliki|milik)\b", ["owns"]),
-    )
-
-    hints: list[str] = []
-    for pattern, relation_keywords in relation_rules:
-        if re.search(pattern, normalized):
-            hints.extend(relation_keywords)
-
-    refers_to_user = bool(
-        re.search(r"\b(aku|saya|gw|gue|nafiz|ku)\b", normalized)
-        or re.search(r"\b(pacarku|pasanganku|pekerjaanku|rumahku)\b", normalized)
-    )
-    if not refers_to_user:
-        return []
-    if hints:
-        hints.append("nafiz")
-    return hints
 
 
 _MEMORY_RECALL_RE = re.compile(
@@ -113,182 +65,16 @@ _VAGUE_PROJECT_REFERENCE_RE = re.compile(
 )
 
 
-def _normalized_text(value: object) -> str:
-    return " ".join(str(value or "").casefold().split())
 
 
-def _mentions_project_name(text: str, project_name: str) -> bool:
-    normalized_text = _normalized_text(text)
-    normalized_name = _normalized_text(project_name)
-    if not normalized_name:
-        return False
-    return bool(
-        re.search(
-            rf"(?<!\w){re.escape(normalized_name)}(?!\w)",
-            normalized_text,
-            flags=re.UNICODE,
-        )
-    )
 
 
-def _resolve_project_scope(
-    user_message: str,
-    *,
-    session_project_id: str | None = None,
-    session_history: list[dict] | None = None,
-) -> ProjectScopeContext:
-    """Resolve project references without exposing memories from every project."""
-    from configs.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        projects = db.query(Project).order_by(Project.updated_at.desc()).all()
-        project_rows = [(str(project.id), str(project.name)) for project in projects]
-    finally:
-        db.close()
-
-    if session_project_id:
-        match = next((item for item in project_rows if item[0] == session_project_id), None)
-        return ProjectScopeContext(
-            status="resolved",
-            project_id=session_project_id,
-            project_name=match[1] if match else session_project_id,
-            resolution="session",
-        )
-
-    named_matches = [item for item in project_rows if _mentions_project_name(user_message, item[1])]
-    if len(named_matches) == 1:
-        return ProjectScopeContext(
-            status="resolved",
-            project_id=named_matches[0][0],
-            project_name=named_matches[0][1],
-            resolution="message",
-        )
-    if len(named_matches) > 1:
-        return ProjectScopeContext(
-            status="ambiguous",
-            candidates=[name for _, name in named_matches],
-        )
-
-    # A bare use of "project" often names a public concept (for example,
-    # project management). Only possessive/deictic wording is a reference to
-    # one of the user's stored projects; explicit project names were handled
-    # above.
-    has_owned_project_reference = bool(_VAGUE_PROJECT_REFERENCE_RE.search(user_message))
-    if not has_owned_project_reference:
-        return ProjectScopeContext()
-
-    for message in reversed(list(session_history or [])[-12:]):
-        content = str(message.get("content") or "") if isinstance(message, dict) else ""
-        history_matches = [item for item in project_rows if _mentions_project_name(content, item[1])]
-        if len(history_matches) == 1:
-            return ProjectScopeContext(
-                status="resolved",
-                project_id=history_matches[0][0],
-                project_name=history_matches[0][1],
-                resolution="history",
-            )
-
-    if len(project_rows) == 1 and _VAGUE_PROJECT_REFERENCE_RE.search(user_message):
-        return ProjectScopeContext(
-            status="resolved",
-            project_id=project_rows[0][0],
-            project_name=project_rows[0][1],
-            resolution="single",
-        )
-
-    if project_rows:
-        try:
-            evidence = search_project_memory_candidates(user_message, limit=12)
-        except Exception:
-            logger.exception("Project-scope semantic resolution failed")
-            evidence = []
-        scores: dict[str, float] = {}
-        for item in evidence:
-            candidate_id = str(item.get("project_id") or "")
-            if candidate_id not in {project_id for project_id, _ in project_rows}:
-                continue
-            score = float(item.get("score") or 0.0)
-            scores[candidate_id] = max(scores.get(candidate_id, -1.0), score)
-        ranked = sorted(scores.items(), key=lambda item: item[1], reverse=True)
-        from configs.settings import settings
-
-        resolution_min_score = min(
-            max(float(settings.MEMORY_SEARCH_SCORE_THRESHOLD) + 0.03, 0.78),
-            0.90,
-        )
-        if (
-            ranked
-            and ranked[0][1] >= resolution_min_score
-            and (len(ranked) == 1 or ranked[0][1] - ranked[1][1] >= 0.05)
-        ):
-            resolved_id = ranked[0][0]
-            resolved_name = next(name for project_id, name in project_rows if project_id == resolved_id)
-            return ProjectScopeContext(
-                status="resolved",
-                project_id=resolved_id,
-                project_name=resolved_name,
-                resolution="semantic",
-            )
-
-    return ProjectScopeContext(
-        status="ambiguous",
-        candidates=[name for _, name in project_rows[:8]],
-    )
 
 
-def _requires_personal_memory(user_message: str) -> bool:
-    normalized = " ".join(str(user_message or "").lower().split())
-    return bool(_MEMORY_RECALL_RE.search(normalized) or _memory_intent_keywords(normalized))
 
 
-def _local_search_keywords(user_message: str) -> list[str]:
-    """Produce a useful graph query even if the LLM router is unavailable."""
-    normalized = " ".join(str(user_message or "").lower().split())
-    keywords = list(_memory_intent_keywords(normalized))
-    if re.search(r"\b(aku|saya|gw|gue|ku)\b", normalized):
-        keywords.append("nafiz")
-    for token in re.findall(r"[a-zA-Z0-9_-]+", normalized):
-        if len(token) >= 3 and token not in _SEARCH_STOPWORDS:
-            keywords.append(token)
-
-    deduplicated: list[str] = []
-    for keyword in keywords:
-        clean_keyword = " ".join(keyword.lower().split())[:100]
-        if clean_keyword and clean_keyword not in deduplicated:
-            deduplicated.append(clean_keyword)
-    return deduplicated[:8]
 
 
-def _filter_active_vector_memories(items: list[dict]) -> list[dict]:
-    """Reject stale vectors even when an older Qdrant payload lacks lifecycle metadata."""
-    if not items:
-        return []
-    from configs.database import SessionLocal
-
-    message_ids = {str(item.get("message_id")) for item in items if item.get("message_id")}
-    if not message_ids:
-        return []
-    db = SessionLocal()
-    try:
-        active_ids = {
-            str(row[0])
-            for row in (
-                db.query(Message.id)
-                .join(Conversation, Conversation.id == Message.conversation_id)
-                .filter(
-                    Message.id.in_(message_ids),
-                    Message.role == "user",
-                    Message.message_type == "normal",
-                    Message.memory_status == "active",
-                    Conversation.deleted_at.is_(None),
-                )
-                .all()
-            )
-        }
-    finally:
-        db.close()
-    return [item for item in items if str(item.get("message_id") or "") in active_ids]
 
 
 def _vector_assertion_evidence(extracted: dict | None) -> tuple[str, list[dict]]:
@@ -369,263 +155,9 @@ def set_source_messages_memory_status(message_ids: list[str], status: str) -> in
     finally:
         db.close()
 
-def retrieve_context(
-    user_message: str,
-    *,
-    raise_on_error: bool = False,
-    project_id: str | None = None,
-    session_history: list[dict] | None = None,
-    session_summary: str | None = None,
-) -> MemoryContext:
-    """
-    Mengambil konteks dari Neo4j (Long-term Facts) dan Qdrant (Semantic Search).
-    Router terlebih dahulu menentukan apakah pesan memang membutuhkan memori.
-    Ini penting untuk pertanyaan mandiri seperti "siapa penciptamu?": hasil
-    vector search yang kebetulan mirip tidak boleh mengalihkan topik jawaban.
-    """
-    logger.info("Retrieving context with an end-to-end deadline")
-    if _is_standalone_assistant_question(user_message):
-        logger.info("Skipping memory retrieval for standalone question about Claire.")
-        return MemoryContext(qdrant_context=[], neo4j_context=[])
-    timeout_seconds = max(float(settings.MEMORY_RETRIEVAL_TIMEOUT_SECONDS), 0.1)
-    deadline = time.monotonic() + timeout_seconds
-    warnings: list[str] = []
-    diagnostics: list[str] = []
-
-    scope_future = _submit_retrieval(
-        _resolve_project_scope,
-        user_message,
-        session_project_id=project_id,
-        session_history=session_history,
-    )
-    route_future = _submit_retrieval(
-        route_memory_query, user_message, session_history=session_history, session_summary=session_summary
-    )
-    concurrent.futures.wait(
-        (scope_future, route_future),
-        timeout=max(deadline - time.monotonic(), 0.0),
-    )
-
-    if scope_future.done():
-        try:
-            project_scope = scope_future.result()
-        except Exception:
-            diagnostics.append(traceback.format_exc())
-            warnings.append("project_scope_unavailable")
-            project_scope = ProjectScopeContext(
-                status="resolved" if project_id else ("ambiguous" if _VAGUE_PROJECT_REFERENCE_RE.search(user_message) else "none"),
-                project_id=project_id,
-                project_name=project_id,
-                resolution="session" if project_id else None,
-            )
-    else:
-        scope_future.cancel()
-        warnings.append("project_scope_timeout")
-        diagnostics.append(f"Project scope resolution exceeded the {timeout_seconds}s retrieval deadline.")
-        project_scope = ProjectScopeContext(
-            status="resolved" if project_id else ("ambiguous" if _VAGUE_PROJECT_REFERENCE_RE.search(user_message) else "none"),
-            project_id=project_id,
-            project_name=project_id,
-            resolution="session" if project_id else None,
-        )
-
-    if route_future.done():
-        try:
-            route = route_future.result()
-        except Exception as exc:
-            diagnostics.append(traceback.format_exc())
-            route = type("RouteFallback", (), {"status": "router_failed", "keywords": [], "error": str(exc)})()
-    else:
-        route_future.cancel()
-        warnings.append("memory_router_timeout")
-        diagnostics.append(f"Memory router exceeded the {timeout_seconds}s retrieval deadline.")
-        route = type("RouteFallback", (), {"status": "router_failed", "keywords": [], "error": "timeout"})()
-
-    effective_project_id = project_scope.project_id
-    query_resolution = QueryResolution(
-        status=("ambiguous" if route.status == "router_failed" and _reference_matches(user_message)
-                else getattr(route, "reference_status", "none")),
-        query=getattr(route, "query", None) or user_message,
-        candidates=list(getattr(route, "candidates", ())),
-        confidence=getattr(route, "confidence", 0.0),
-    )
-    if query_resolution.status == "ambiguous":
-        return MemoryContext(
-            project_scope=project_scope, query_resolution=query_resolution,
-            retrieval_status=RetrievalStatus(
-                router="router_failed" if route.status == "router_failed" else "forced",
-                router_available=route.status != "router_failed", warnings=["memory_reference_ambiguous"],
-            ),
-        )
-    retrieval_query = query_resolution.query
-
-    intent_keywords = _memory_intent_keywords(retrieval_query)
-    deterministic_recall = _requires_personal_memory(retrieval_query)
-    if route.status == "router_failed":
-        router_state = "router_failed"
-        should_retrieve = True
-        router_keywords = _local_search_keywords(retrieval_query)
-    elif route.status == "needed":
-        router_state = "needed"
-        should_retrieve = True
-        router_keywords = route.keywords
-    elif effective_project_id or project_scope.status == "ambiguous" or deterministic_recall or intent_keywords:
-        router_state = "forced"
-        should_retrieve = True
-        router_keywords = _local_search_keywords(retrieval_query)
-    else:
-        return MemoryContext(
-            retrieval_status=RetrievalStatus(router="not_needed"),
-            project_scope=project_scope,
-            query_resolution=query_resolution,
-        )
-
-    keywords = []
-    for keyword in [*intent_keywords, *router_keywords]:
-        normalized_keyword = " ".join(str(keyword or "").lower().split())
-        if normalized_keyword and normalized_keyword not in keywords:
-            keywords.append(normalized_keyword)
-    logger.info(
-        "Generated RAG Keywords: intent=%s router=%s combined=%s",
-        intent_keywords,
-        router_keywords,
-        keywords,
-    )
-    if not keywords:
-        keywords = _local_search_keywords(retrieval_query)
-
-    if not should_retrieve:
-        return MemoryContext(retrieval_status=RetrievalStatus(router="not_needed"))
-
-    qdrant_results: list[dict] = []
-    neo4j_results: list[str] = []
-    qdrant_available = True
-    neo4j_available = True
-    include_historical = bool(_HISTORICAL_RE.search(user_message.lower()))
-
-    remaining = max(deadline - time.monotonic(), 0.0)
-    if remaining <= 0:
-        future_qdrant = future_neo4j = None
-        warnings.extend(["semantic_memory_timeout", "knowledge_graph_timeout"])
-        diagnostics.append("The retrieval deadline was exhausted by routing and scope resolution.")
-    else:
-        completed: set[concurrent.futures.Future] = set()
-        future_qdrant = _submit_retrieval(
-            search_memory,
-            retrieval_query,
-            3,
-            project_id=effective_project_id,
-        )
-        future_neo4j = _submit_retrieval(
-            neo4j_client.search_knowledge,
-            keywords,
-            include_historical=include_historical,
-            project_id=effective_project_id,
-        )
-        completed, _ = concurrent.futures.wait(
-            (future_qdrant, future_neo4j),
-            timeout=max(deadline - time.monotonic(), 0.0),
-        )
-    if future_qdrant is not None:
-        if future_qdrant not in completed:
-            qdrant_available = False
-            warnings.append("semantic_memory_timeout")
-            diagnostics.append(
-                "Qdrant semantic-memory retrieval exceeded "
-                f"{settings.MEMORY_RETRIEVAL_TIMEOUT_SECONDS} seconds."
-            )
-            future_qdrant.cancel()
-        else:
-            try:
-                qdrant_results = future_qdrant.result()
-            except Exception as exc:
-                qdrant_available = False
-                warnings.append("semantic_memory_unavailable")
-                diagnostics.append(traceback.format_exc())
-                logger.exception("Qdrant retrieval failed; continuing with remaining context: %s", exc)
-
-    if future_neo4j is not None:
-        if future_neo4j not in completed:
-            neo4j_available = False
-            warnings.append("knowledge_graph_timeout")
-            diagnostics.append(
-                "Neo4j knowledge-graph retrieval exceeded "
-                f"{settings.MEMORY_RETRIEVAL_TIMEOUT_SECONDS} seconds."
-            )
-            future_neo4j.cancel()
-        else:
-            try:
-                neo4j_results = future_neo4j.result()
-            except Exception as exc:
-                neo4j_available = False
-                warnings.append("knowledge_graph_unavailable")
-                diagnostics.append(traceback.format_exc())
-                logger.exception("Neo4j retrieval failed; continuing with remaining context: %s", exc)
-    else:
-        neo4j_available = False
-
-    qdrant_timed_out = future_qdrant is None
-    if qdrant_timed_out:
-        qdrant_available = False
-
-    qdrant_results = _filter_active_vector_memories(qdrant_results)
-
-    if not qdrant_available and not neo4j_available:
-        warnings.append("memory_backends_unavailable")
-
-    if raise_on_error and diagnostics:
-        raise InternalFeatureError(
-            "memory_retrieval",
-            "Pengambilan konteks memori gagal atau melewati batas waktu.",
-            redact_diagnostic_log("\n\n".join(diagnostics)),
-        )
-
-    context = MemoryContext(
-        qdrant_context=qdrant_results,
-        neo4j_context=neo4j_results,
-        retrieval_status=RetrievalStatus(
-            router=router_state,
-            router_available=router_state != "router_failed",
-            qdrant_available=qdrant_available,
-            neo4j_available=neo4j_available,
-            degraded=not (qdrant_available and neo4j_available),
-            warnings=warnings,
-        ),
-        project_scope=project_scope,
-        query_resolution=query_resolution,
-    )
-    return context
-
-def get_session_history(db: Session, session_id: str, limit: int = 30):
-    """
-    Mengambil N pesan terakhir dari sebuah sesi (Short-Term Memory).
-    """
-    if not session_id:
-        return []
-        
-    messages = (
-        db.query(Message)
-        .filter(
-            Message.conversation_id == session_id,
-            Message.message_type == "normal",
-        )
-        .order_by(*Message.chronological_order(descending=True))
-        .limit(limit)
-        .all()
-    )
-    
-    history = []
-    for msg in reversed(messages):
-        history.append({"role": msg.role, "content": msg.content})
-        
-    return history
 
 
-def get_session_summary(db: Session, session_id: str) -> str:
-    if not session_id:
-        return ""
-    row = db.query(Conversation.summary).filter(Conversation.id == session_id).first()
-    return str(row[0] or "") if row else ""
+
 
 from models.llm_usage import LLMUsageLog
 
@@ -1936,3 +1468,26 @@ def generate_and_save_title(session_id: str, first_message: str):
             db.close()
     except Exception as e:
         logger.error(f"Error in background task generate_and_save_title: {e}")
+
+from app.infrastructure.memory.composition import create_memory_workflows
+from app.compatibility import install_facade
+memory_workflows = create_memory_workflows(_MEMORY_RETRIEVAL_EXECUTOR)
+install_facade(__name__, {
+    "_resolve_project_scope": (memory_workflows, "resolve_project_scope"),
+    "retrieve_context": (memory_workflows, "retrieve_context"),
+    "_filter_active_vector_memories": (memory_workflows, "filter_active_vector_memories"),
+    "get_session_history": (memory_workflows, "get_session_history"),
+    "get_session_summary": (memory_workflows, "get_session_summary"),
+    "_normalized_text": (memory_workflows.scope, "normalized_text"),
+    "_mentions_project_name": (memory_workflows.scope, "mentions_project_name"),
+    "_is_standalone_assistant_question": (memory_workflows.retrieval, "is_standalone_assistant_question"),
+    "_memory_intent_keywords": (memory_workflows.retrieval, "memory_intent_keywords"),
+    "_requires_personal_memory": (memory_workflows.retrieval, "requires_personal_memory"),
+    "_local_search_keywords": (memory_workflows.retrieval, "local_search_keywords"),
+    "search_memory": (memory_workflows, "search_memory"),
+    "search_project_memory_candidates": (memory_workflows, "search_project_memory_candidates"),
+    "route_memory_query": (memory_workflows, "route_memory_query"),
+    "_submit_retrieval": (memory_workflows.retrieval_executor, "submit"),
+    "neo4j_client": (memory_workflows, "graph"),
+    "vector_store": (memory_workflows, "vector"),
+})
