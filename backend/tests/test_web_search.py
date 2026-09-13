@@ -74,12 +74,12 @@ class WebSearchRoutingTests(TestCase):
             plan.research_goal,
         )
 
-    def test_explicit_fallback_searches_the_original_query(self):
+    def test_explicit_fallback_searches_the_information_target(self):
         message = "tolong cari harga tiket konser hari ini"
         plan = web_search_service.plan_web_search(message)
         self.assertTrue(plan.needed)
-        self.assertEqual(message, plan.query)
-        self.assertEqual((message,), plan.queries)
+        self.assertEqual("harga tiket konser hari ini", plan.query)
+        self.assertEqual((plan.query,), plan.queries)
         self.assertEqual("explicit_search_fallback", plan.reason)
 
     def test_google_word_triggers_explicit_fallback(self):
@@ -87,10 +87,10 @@ class WebSearchRoutingTests(TestCase):
         plan = web_search_service.plan_web_search(message)
         self.assertTrue(plan.needed)
 
-    def test_fallback_does_not_infer_search_from_topic_or_time(self):
+    def test_fallback_requires_search_for_potentially_changing_facts(self):
         plan = web_search_service.plan_web_search("berapa harga produk itu hari ini?")
-        self.assertFalse(plan.needed)
-        self.assertEqual("explicit_search_not_requested", plan.reason)
+        self.assertTrue(plan.needed)
+        self.assertEqual("live_fact_required", plan.reason)
 
     def test_fallback_does_not_analyze_conversation_history(self):
         plan = web_search_service.plan_web_search_with_context(

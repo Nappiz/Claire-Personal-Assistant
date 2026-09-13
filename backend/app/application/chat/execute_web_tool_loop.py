@@ -7,6 +7,7 @@ from schemas.chat_sch import WebPageContent, WebSearchContext
 from app.domain.diagnostics import InternalFeatureError
 from app.domain.llm.planning_stream import PlanningStreamResult
 from app.application.chat.stream_planning_response import stream_planning_response
+from app.domain.llm.tool_text_policy import PlanningProtocolError, tool_envelope, looks_like_tool_text
 logger = logging.getLogger("services.llm_service")
 
 from dataclasses import dataclass
@@ -35,6 +36,7 @@ class ToolLoopState:
     base_message_count: Any
     web_tools_allowed: Any
     planning_text_emitted: bool = False
+    search_required: bool = False
 
 class ExecuteWebToolLoop:
     async def execute_web_tool_loop(self, state: ToolLoopState):
@@ -50,6 +52,12 @@ class ExecuteWebToolLoop:
 
                 tool_calls = list(getattr(planning_message, "tool_calls", None) or [])
                 if not tool_calls:
+                    envelope = tool_envelope(planning_message.content)
+                    if looks_like_tool_text(planning_message.content):
+                        plan = self.tools.textual_search_plan(envelope, state.user_message) if envelope else None
+                        raise PlanningProtocolError("Provider returned a textual tool envelope", plan)
+                    if state.search_required and not state.search_performed:
+                        raise PlanningProtocolError("Required web_search was not executed")
                     # This response is already the answer, not a discarded
                     # draft. Do not pay for a second generation of the same turn.
                     content = getattr(planning_message, "content", None)
@@ -78,7 +86,7 @@ class ExecuteWebToolLoop:
                         }
                         continue
                     try:
-                        search_plan = self.tools.web_search_plan_from_call(call)
+                        search_plan = self.tools.web_search_plan_from_call(call, state.user_message)
                         state.search_performed = True
                         yield {
                             "type": "web_search",
@@ -207,6 +215,8 @@ class ExecuteWebToolLoop:
                     or all(state.read_cache[url]["ok"] for url in read_requests)
                 ):
                     break
+            if state.search_required and not state.search_performed:
+                raise PlanningProtocolError("Required web_search was not executed")
         except InternalFeatureError:
             raise
         except Exception as exc:
@@ -220,7 +230,10 @@ class ExecuteWebToolLoop:
             # Never resend that known-invalid history in the final request.
             del state.llm_messages[state.base_message_count:]
             if state.web_tools_allowed and not state.search_performed:
-                fallback_plan = web_search_service.plan_web_search(state.user_message)
+                fallback_plan = (
+                    exc.search_plan if isinstance(exc, PlanningProtocolError) and exc.search_plan
+                    else web_search_service.plan_web_search(state.user_message)
+                )
                 if fallback_plan.needed:
                     yield {
                         "type": "web_search",

@@ -7,6 +7,7 @@ from configs.settings import settings
 from schemas.chat_sch import WebSearchContext, WebSearchResult
 from app.domain.web.intent_policy import WebSearchPlan, plan_web_search_with_context
 from app.domain.web.ranking import rank_results_by_tfidf, merge_result_groups
+from app.domain.web.evidence_policy import filter_search_evidence
 from app.infrastructure.web.search_results import parse_results
 
 logger = logging.getLogger("services.web_search_service")
@@ -55,11 +56,20 @@ async def retrieve_web_context(
                     params=params,
                 )
                 response.raise_for_status()
-                return parse_results(
-                    response.json(),
-                    limit=max_results,
+                payload = response.json()
+                candidates = parse_results(
+                    payload,
+                    limit=60,
                     query=search_query,
                 )
+                # Validate against the query that actually retrieved the result,
+                # not only the (possibly differently worded) research goal.
+                relevant = filter_search_evidence(candidates, search_query)[:max_results]
+                if not relevant and payload.get("unresponsive_engines"):
+                    # SearXNG can return HTTP 200 even when Google is suspended
+                    # by CAPTCHA. That is an engine failure, not an empty search.
+                    raise ValueError("SearXNG search engine unavailable")
+                return relevant
 
             planned_queries = plan.queries or (plan.query,)
             search_queries: list[str] = []

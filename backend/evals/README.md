@@ -14,7 +14,7 @@ The runner checks missing/duplicate selections and writes ignored
 | Group | Evidence |
 | --- | --- |
 | Prompt requests | Frozen SHA-256 request digests; temporal context with fixed clock |
-| Answer/tool loop | First delta before provider completion, verbatim whitespace, fragmented tool replay metadata, search/read ordering, bounded recovery and stream cancellation |
+| Answer/tool loop | First delta before provider completion, verbatim whitespace, fragmented tool replay metadata, forced fresh-fact search, tool-JSON gating, irrelevant/CAPTCHA results, bounded recovery and stream cancellation |
 | Retrieval | Deterministic vector payload/ranking fixtures, project/global scope, URL filtering and TF-IDF |
 | Graph facts | Frozen ordered Cypher/parameters/results, identity/provenance, residence and fact policies |
 | Failure safety | Partial write, lost lease, duplicate claim, cancellation and worker shutdown |

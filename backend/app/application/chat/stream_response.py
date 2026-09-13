@@ -8,6 +8,9 @@ from typing import Any
 from schemas.chat_sch import MemoryContext, WebPageContent
 from app.domain.llm.contracts import DEFAULT_MODEL_NAME
 from app.domain.llm.tool_contracts import WEB_TOOL_INSTRUCTIONS
+from app.domain.llm.tool_text_policy import VisibleTextGate
+from app.domain.web.intent_policy import requires_web_search
+from app.domain.web.evidence_policy import web_evidence_unavailable, unavailable_web_answer
 logger = logging.getLogger("services.llm_service")
 
 class StreamResponse:
@@ -87,11 +90,18 @@ PROJECT MEMORY OVERRIDE:
 
         try:
             state = ToolLoopState(client=client, provider=provider, model_name=model_name, user_message=user_message, session_history=session_history, memory_context=memory_context, llm_messages=llm_messages, total_usage=total_usage, web_context=web_context, search_performed=search_performed, allowed_urls=allowed_urls, pages=pages, max_rounds=max_rounds, max_read_urls=max_read_urls, read_cache=read_cache, attempted_urls=attempted_urls, direct_answer=direct_answer, direct_finish_reason=direct_finish_reason, planning_timeout=planning_timeout, base_message_count=base_message_count, web_tools_allowed=web_tools_allowed)
+            state.search_required = web_tools_allowed and requires_web_search(user_message)
             async with aclosing(self.execute_web_tool_loop(state)) as planning:
                 async for event in planning:
                     yield event
             web_context, search_performed = state.web_context, state.search_performed
             direct_answer, direct_finish_reason = state.direct_answer, state.direct_finish_reason
+            if state.search_required and not search_performed:
+                yield {"type": "delta", "delta": "Aku belum bisa menjalankan pencarian web untuk memverifikasi informasi ini. Tolong perjelas objek yang ingin dicari; aku tidak akan menebaknya."}
+                if total_usage:
+                    yield {"type": "usage", "usage": dict(total_usage)}
+                yield {"type": "completion", "response_status": "complete", "finish_reason": "stop"}
+                return
 
             if search_performed:
                 yield {
@@ -124,6 +134,13 @@ FINAL RESPONSE PHASE:
 - Jika bukti tidak memadai, nyatakan batasnya secara jujur; jangan menebak.
 """
 
+            if search_performed and web_evidence_unavailable(web_context):
+                yield {"type": "delta", "delta": unavailable_web_answer(web_context)}
+                if total_usage:
+                    yield {"type": "usage", "usage": dict(total_usage)}
+                yield {"type": "completion", "response_status": "complete", "finish_reason": "stop"}
+                return
+
             if direct_answer is not None:
                 # The planner's provider deltas were already forwarded above.
                 if total_usage:
@@ -150,6 +167,7 @@ FINAL RESPONSE PHASE:
                     stream_options={"include_usage": True},
                 )
                 last_usage = {}
+                text_gate = VisibleTextGate()
                 self.responses.add_usage(total_usage, None, invocation_id)
                 async with stream:
                     async for chunk in stream:
@@ -168,13 +186,19 @@ FINAL RESPONSE PHASE:
                         for choice in getattr(chunk, "choices", None) or []:
                             self.responses.record_stream_diagnostics(choice, diagnostics)
                             content = self.responses.stream_delta_text(getattr(choice, "delta", None))
-                            if content:
+                            visible = text_gate.feed(content) if content else ""
+                            if visible:
                                 # Provider chunk boundaries are arbitrary. A chunk that is
                                 # only whitespace may carry a word separator, Markdown
                                 # newline, or code indentation and must survive verbatim.
-                                if content.strip():
+                                if visible.strip():
                                     answer_text_emitted = True
-                                yield {"type": "delta", "delta": content}
+                                yield {"type": "delta", "delta": visible}
+                    visible = text_gate.finish()
+                    if visible:
+                        if visible.strip():
+                            answer_text_emitted = True
+                        yield {"type": "delta", "delta": visible}
 
             first_diagnostics: dict[str, Any] = {
                 "finish_reasons": [],
@@ -220,6 +244,7 @@ FINAL RESPONSE PHASE:
                         recovery_diagnostics["tool_calls"],
                         bool(recovery_diagnostics["refusal"]),
                     )
+                    yield {"type": "delta", "delta": "Aku belum bisa memperoleh jawaban yang valid dari provider. Aku tidak akan menampilkan instruksi tool sebagai jawaban."}
                 final_diagnostics = recovery_diagnostics
 
             if total_usage and not usage_emitted:
