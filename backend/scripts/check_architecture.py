@@ -60,15 +60,26 @@ def dependency_graph(sources):
                     child = base + "." + alias.name
                     targets.append(child if child in modules else base)
             for target in targets:
+                if target.startswith("app.") and target not in modules:
+                    violations.append(f"{path}:{node.lineno}: missing internal module {target}")
                 if target in modules and target != module:
                     graph[module].add(target)
                 forbidden = False
+                production = module in {"main", "app", "configs", "models", "schemas"} or module.startswith(("app.", "configs.", "models.", "schemas."))
+                if production and (target == "services" or target.startswith("services.")):
+                    violations.append(f"{path}:{node.lineno}: production imports deprecated {target}")
+                if isinstance(node, ast.ImportFrom) and module.startswith("app."):
+                    target_package = target.rpartition(".")[0]
+                    if target.startswith("app.") and target_package != package and any(alias.name.startswith("_") for alias in node.names):
+                        violations.append(f"{path}:{node.lineno}: private import across package {target}")
                 if module.startswith("app.domain."):
                     forbidden = target.startswith(("app.api", "app.application", "app.infrastructure", "services", "configs")) or target.split(".")[0] in {"fastapi", "sqlalchemy", "openai", "neo4j", "qdrant_client", "sentence_transformers"}
                 elif module.startswith("app.application."):
                     forbidden = target.startswith(("app.api", "app.infrastructure", "services", "configs", "models")) or target.split(".")[0] in {"fastapi", "sqlalchemy", "openai", "neo4j", "qdrant_client", "sentence_transformers"}
                 elif module.startswith("app.api.routers."):
                     forbidden = target.startswith(("services", "models", "configs", "app.infrastructure")) or target.split(".")[0] in {"sqlalchemy", "openai", "neo4j", "qdrant_client", "sentence_transformers"}
+                elif module.startswith(("app.workers.", "app.ports.")):
+                    forbidden = target.startswith(("app.api", "app.infrastructure", "services", "models", "configs")) or target.split(".")[0] in {"fastapi", "sqlalchemy", "openai", "neo4j", "qdrant_client", "sentence_transformers"}
                 if forbidden:
                     violations.append(f"{path}:{node.lineno}: forbidden dependency {target}")
     return graph, violations

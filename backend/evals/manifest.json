@@ -1,0 +1,13 @@
+{
+  "version": "structural-refactor-v1",
+  "mode": "offline_contract_regression",
+  "threshold": 1.0,
+  "groups": {
+    "prompt_request_fidelity": ["test_llm_prompt_contract.py", "test_temporal_awareness.py"],
+    "answer_and_tool_loop_fidelity": ["test_llm_web_tool_loop.py", "test_llm_workflow_boundaries.py"],
+    "retrieval_golden_and_scope": ["test_vector_adapter.py", "test_project_memory_scope.py", "test_memory_read_boundaries.py", "test_web_search.py"],
+    "expected_graph_facts": ["test_graph_adapter.py", "test_location_and_inline_reference_fixes.py"],
+    "failure_retry_cancel": ["test_memory_outbox_boundaries.py", "test_memory_turn_boundaries.py", "test_worker_contracts.py"],
+    "http_sse_smoke": ["test_api_contract.py", "test_refactored_http.py"]
+  }
+}

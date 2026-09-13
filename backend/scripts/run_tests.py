@@ -55,19 +55,24 @@ def main() -> int:
         with patch.object(socket.socket, "connect", offline_connect), patch.object(socket, "socketpair", local_socketpair):
             for pattern in sys.argv[1:] or ["test_*.py"]:
                 suite.addTests(unittest.defaultTestLoader.discover(str(backend / "tests"), pattern=pattern))
+            def test_ids(tests):
+                return [identifier for test in tests for identifier in
+                        (test_ids(test) if isinstance(test, unittest.TestSuite) else [test.id()])]
+            planned = test_ids(suite)
             result = unittest.TextTestRunner(verbosity=1).run(suite)
         report = backend / ".refactor" / "test-results.json"
         report.parent.mkdir(exist_ok=True)
         report.write_text(json.dumps({
             "tests": result.testsRun,
+            "test_ids": planned,
             "failures": [test.id() for test, _ in result.failures],
             "errors": [test.id() for test, _ in result.errors],
             "skipped": [(test.id(), reason) for test, reason in result.skipped],
         }, indent=2), encoding="utf-8")
         if "configs.database" in sys.modules:
             sys.modules["configs.database"].engine.dispose()
-        if "services.qdrant_service" in sys.modules:
-            client = sys.modules["services.qdrant_service"].client
+        if "app.infrastructure.vector.state" in sys.modules:
+            client = sys.modules["app.infrastructure.vector.state"].client
             if client is not None:
                 client.close()
         return 0 if result.wasSuccessful() else 1
