@@ -1,13 +1,16 @@
 from app.infrastructure.persistence.memory.memory_resolve_project_scope import ResolveProjectScopeQueries
 from app.infrastructure.persistence.memory.memory_retrieve_context import RetrieveContextQueries
 from app.infrastructure.persistence.memory.conversations_read_history import ReadHistoryQueries
+from app.infrastructure.persistence.memory.conversations_begin_turn import BeginTurnQueries
+from app.infrastructure.persistence.memory.conversations_complete_turn import CompleteTurnQueries
+from app.infrastructure.persistence.memory.conversations_persist_interaction import PersistInteractionQueries
 from models.message import Message
 from models.conversation import Conversation
 from models.memory_outbox import MemoryOutbox
 from models.llm_usage import LLMUsageLog
 
 
-class MemoryTransaction(ResolveProjectScopeQueries, RetrieveContextQueries, ReadHistoryQueries):
+class MemoryTransaction(ResolveProjectScopeQueries, RetrieveContextQueries, ReadHistoryQueries, BeginTurnQueries, CompleteTurnQueries, PersistInteractionQueries):
     """SQLAlchemy-backed UOW; query capabilities stay in focused adapter mixins."""
     def __init__(self, db, config):
         self.db, self.config = db, config
