@@ -3,7 +3,8 @@ import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from sqlalchemy import inspect, text
-from routes import chat_routes, settings_routes
+from app.api import router as chat_routes
+from app.api.routers import settings as settings_routes
 from fastapi.middleware.cors import CORSMiddleware
 from services.neo4j_service import neo4j_client
 from services.settings_service import get_setting, set_setting
