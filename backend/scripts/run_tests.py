@@ -49,7 +49,7 @@ def main() -> int:
             finally:
                 pair_state.creating = False
 
-        logging.disable(logging.CRITICAL)
+        logging.getLogger().handlers = [logging.NullHandler()]
         # A real provider call in an offline test must fail rather than touching
         # local user stores or sending credentials/content over the network.
         with patch.object(socket.socket, "connect", offline_connect), patch.object(socket, "socketpair", local_socketpair):
@@ -64,6 +64,12 @@ def main() -> int:
             "errors": [test.id() for test, _ in result.errors],
             "skipped": [(test.id(), reason) for test, reason in result.skipped],
         }, indent=2), encoding="utf-8")
+        if "configs.database" in sys.modules:
+            sys.modules["configs.database"].engine.dispose()
+        if "services.qdrant_service" in sys.modules:
+            client = sys.modules["services.qdrant_service"].client
+            if client is not None:
+                client.close()
         return 0 if result.wasSuccessful() else 1
 
 
