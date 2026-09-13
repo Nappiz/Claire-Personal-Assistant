@@ -63,12 +63,12 @@ def delete_session(session_id, dependencies: ResourceDependencies):
     memory_service = dependencies.memory
     neo4j_client = dependencies.graph
     delete_memory_by_session = dependencies.vector.delete_memory_by_session
-    
+
     # 1. Hapus dari SQLite (UI History)
     conv = uow.conversations.get(session_id)
     if not conv:
         raise ApplicationError(status_code=404, detail="Session not found")
-        
+
     source_message_ids = [message.id for message in conv.messages]
 
     # Persist cancellation before touching external stores so a background
@@ -107,5 +107,5 @@ def delete_session(session_id, dependencies: ResourceDependencies):
     conv.summary_pending = False
     conv.project_id = None
     uow.commit()
-    
+
     return {"message": "Session and derived memory deleted successfully", "graph_cleanup": graph_cleanup}

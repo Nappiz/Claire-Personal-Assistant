@@ -16,7 +16,7 @@ class Neo4jConnection:
             self.driver.verify_connectivity()
             self.available = True
             logger.info("Connected to Neo4j successfully!")
-            
+
             # ``name`` is only a display value. It cannot be unique: two people
             # can legitimately share a name. Migrate old installations before
             # enforcing the contextual identity key used by new graph writes.
@@ -79,7 +79,7 @@ class Neo4jConnection:
                         r.expired_at = timestamp(),
                         r.updated_at = timestamp()
                 """)
-                
+
         except Exception as e:
             self.available = False
             logger.error(f"Failed to connect to Neo4j: {e}")

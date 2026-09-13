@@ -26,7 +26,7 @@ class GraphConsolidation:
             "protected_current_nodes": 0,
         }
         decay_factor = 0.9 ** safe_days_passed
-        
+
         try:
             with self.driver.session() as session:
                 expiration_result = session.run("""
@@ -45,7 +45,7 @@ class GraphConsolidation:
                 query = "MATCH (n:Entity) WHERE n.importance IS NOT NULL SET n.importance = n.importance * $decay RETURN count(n) AS count"
                 result = session.run(query, decay=decay_factor)
                 stats["decayed"] = result.single()["count"]
-                
+
                 protected_query = """
                 MATCH (n:Entity)
                 WHERE EXISTS {
@@ -62,8 +62,8 @@ class GraphConsolidation:
                 # not disappear merely because its ranking score decayed.
                 # 30 days in ms = 30 * 24 * 60 * 60 * 1000 = 2592000000
                 forget_query = """
-                MATCH (n:Entity) 
-                WHERE n.importance < 0.2 
+                MATCH (n:Entity)\x20
+                WHERE n.importance < 0.2\x20
                 AND n.updated_at < (timestamp() - 2592000000)
                 AND NOT EXISTS {
                     MATCH (n)-[r]-()
@@ -73,10 +73,10 @@ class GraphConsolidation:
                 """
                 result = session.run(forget_query)
                 stats["forgotten_nodes"] = result.single()["count"]
-                
+
                 # 3. Prune orphan nodes (no connections at all)
                 prune_query = """
-                MATCH (n:Entity) 
+                MATCH (n:Entity)\x20
                 WHERE NOT EXISTS { MATCH (n)-[r]-() WHERE type(r) <> 'RESOLVES_TO' }
                 DETACH DELETE n RETURN count(n) AS count
                 """
@@ -86,7 +86,7 @@ class GraphConsolidation:
                     "MATCH (identity:EntityIdentity) "
                     "WHERE NOT (identity)-[:RESOLVES_TO]->() DETACH DELETE identity"
                 )
-                
+
                 logger.info(f"Memory Consolidation Done: {stats}")
                 return stats
         except Exception as e:

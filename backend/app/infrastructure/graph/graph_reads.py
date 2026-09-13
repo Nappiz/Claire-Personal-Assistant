@@ -30,7 +30,7 @@ class GraphReads:
                 logger.info("Skipping noisy graph-search keyword: %r", keyword)
         if not prepared_keywords:
             return facts
-            
+
         exact_keywords = [item["normalized"] for item in prepared_keywords]
         fulltext_query = " OR ".join(
             f'"{item["normalized"]}"'
@@ -120,7 +120,7 @@ class GraphReads:
                     m_labels = record['m_labels']
                     n_label = next((l for l in n_labels if l != "Entity"), "Entity") if n_labels else "Entity"
                     m_label = next((l for l in m_labels if l != "Entity"), "Entity") if m_labels else "Entity"
-                    
+
                     n_context = record.get("n_identity_context")
                     m_context = record.get("m_identity_context")
                     n_hint = f"; identity: {n_context}" if n_context else ""
@@ -166,7 +166,7 @@ class GraphReads:
         """
         nodes_dict = {}
         links = []
-        
+
         with self.driver.session() as session:
             query = """
             MATCH (n:Entity)-[r]->(m:Entity)
@@ -213,12 +213,12 @@ class GraphReads:
             LIMIT $limit
             """
             result = session.run(query, limit=limit, include_inactive=include_inactive)
-            
+
             for record in result:
                 s_id = str(record["source_id"])
                 s_labels = record["source_labels"]
                 s_label = next((l for l in s_labels if l != "Entity"), "Entity") if s_labels else "Entity"
-                
+
                 if s_id not in nodes_dict:
                     nodes_dict[s_id] = {
                         "id": s_id,
@@ -232,11 +232,11 @@ class GraphReads:
                         "source_conversation_ids": record["source_node_conversation_ids"] or [],
                         "source_message_ids": record["source_node_message_ids"] or [],
                     }
-                    
+
                 t_id = str(record["target_id"])
                 t_labels = record["target_labels"]
                 t_label = next((l for l in t_labels if l != "Entity"), "Entity") if t_labels else "Entity"
-                
+
                 if t_id not in nodes_dict:
                     nodes_dict[t_id] = {
                         "id": t_id,
@@ -250,7 +250,7 @@ class GraphReads:
                         "source_conversation_ids": record["target_node_conversation_ids"] or [],
                         "source_message_ids": record["target_node_message_ids"] or [],
                     }
-                    
+
                 links.append({
                     "id": record["fact_id"],
                     "source": s_id,
@@ -275,7 +275,7 @@ class GraphReads:
                     "source_conversation_ids": record["fact_source_conversation_ids"] or [],
                     "source_message_ids": record["fact_source_message_ids"] or [],
                 })
-                
+
         return {
             "nodes": list(nodes_dict.values()),
             "links": links
