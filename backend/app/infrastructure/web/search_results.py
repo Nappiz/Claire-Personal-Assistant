@@ -4,8 +4,7 @@ from schemas.chat_sch import WebSearchResult
 from app.domain.web.url_policy import normalize_public_url
 from app.domain.web.ranking import rank_results_by_tfidf
 
-_SEARCH_ENGINES = "google"
-_ALLOWED_ENGINE_NAMES = frozenset(_SEARCH_ENGINES.split(","))
+from app.infrastructure.web.search_config import ALLOWED_ENGINE_NAMES as _ALLOWED_ENGINE_NAMES
 
 def clean_text(value: object, *, limit: int) -> str:
     text = html.unescape(re.sub(r"<[^>]*>", " ", str(value or "")))

@@ -10,15 +10,7 @@ from app.domain.web.ranking import rank_results_by_tfidf, merge_result_groups
 from app.infrastructure.web.search_results import parse_results
 
 logger = logging.getLogger("services.web_search_service")
-_SEARCH_ENGINES = "google"
-_USER_AGENTS = (
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-    "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:142.0) "
-    "Gecko/20100101 Firefox/142.0",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 "
-    "(KHTML, like Gecko) Version/18.6 Safari/605.1.15",
-)
+from app.infrastructure.web.search_config import SEARCH_ENGINES as _SEARCH_ENGINES, USER_AGENTS as _USER_AGENTS
 
 async def retrieve_web_context(
     user_message: str,

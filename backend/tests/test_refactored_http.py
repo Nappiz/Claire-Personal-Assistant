@@ -10,7 +10,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.api.dependencies import get_db
 from app.api import dependencies
-from app.infrastructure import legacy_bridges as bridges
+from app.infrastructure import application_wiring as bridges
 from models import Base
 from models.conversation import Conversation
 from models.message import Message

@@ -17,7 +17,8 @@ def create_worker_tasks(logger):
     def due_jobs(**kwargs):
         results = memory_workflows.process_due_memory_jobs(**kwargs)
         for result in results:
-            emit_event("memory.job", job_id=result.get("id"), job_state=result.get("status"))
+            emit_event("memory.job", job_id=result.get("id"), job_state=result.get("status"),
+                       session_id=result.get("conversation_id"), turn_id=result.get("id"))
         return results
     def maintenance():
         return run_memory_maintenance_once(

@@ -3,7 +3,7 @@ from app.compatibility import install_facade
 from app.api.router import router
 from app.api import dependencies, errors, sse
 from app.api.routers import chat, conversations, projects, graph, memory, system
-from app.infrastructure import legacy_bridges as bridges
+from app.infrastructure import application_wiring as bridges
 from services import qdrant_service, memory_service, llm_service
 install_facade(__name__, {
     "get_projects": (projects, "get_projects"),

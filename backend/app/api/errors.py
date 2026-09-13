@@ -1,7 +1,7 @@
 import logging
 from openai import APIConnectionError, APIStatusError, APITimeoutError
 from app.domain.diagnostics import InternalFeatureError, redact_diagnostic_log
-from app.infrastructure.legacy_bridges import llm_gateway as llm_service
+from app.infrastructure.application_wiring import llm_gateway as llm_service
 def _upstream_error_payload(exc: Exception, session_id: str) -> dict:
     """Map provider failures to stable, frontend-safe error codes."""
     exception_name = type(exc).__name__.lower()

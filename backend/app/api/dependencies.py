@@ -3,7 +3,7 @@ from fastapi.concurrency import run_in_threadpool
 from configs.database import get_db, SessionLocal
 from app.application.dependencies import ChatDependencies, ResourceDependencies
 from app.infrastructure.persistence.unit_of_work import SQLAlchemyUnitOfWork
-from app.infrastructure import legacy_bridges as bridges
+from app.infrastructure import application_wiring as bridges
 
 
 def resource_dependencies(db=None):

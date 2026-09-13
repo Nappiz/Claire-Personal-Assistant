@@ -76,9 +76,10 @@ def begin_call(purpose, provider, model, attempt=1):
         if context.get(key) is not None:
             values[key] = context[key]
     _persist(call_id, values)
-    version_purpose = {"chat_planning": "chat", "memory_router": "router"}.get(purpose, purpose)
+    version_purpose = {"chat_planning": "chat", "chat_recovery": "chat", "chat_stream": "chat", "memory_router": "router"}.get(purpose, purpose)
     emit_event("ai.started", invocation_id=call_id, provider=values["provider"],
-               model=model, purpose=purpose, prompt_version=PROMPT_VERSIONS.get(version_purpose, "pre-stage5-v1"))
+               model=model, purpose=purpose, session_id=values.get("conversation_id"), turn_id=values.get("turn_id"),
+               prompt_version=PROMPT_VERSIONS.get(version_purpose, "pre-stage5-v1"))
     return {"id": call_id, "started": time.monotonic(), "values": values}
 
 
@@ -115,7 +116,7 @@ def finish_call(call, *, response=None, usage=None, finish_reason=None, error=No
     if values["total_tokens"] is None and all(values[key] is not None for key in ("prompt_tokens", "completion_tokens")):
         values["total_tokens"] = values["prompt_tokens"] + values["completion_tokens"]
     _persist(call["id"], values)
-    emit_event("ai.finished", invocation_id=call["id"], **{key: values.get(key) for key in
+    emit_event("ai.finished", invocation_id=call["id"], session_id=values.get("conversation_id"), turn_id=values.get("turn_id"), **{key: values.get(key) for key in
         ("provider", "model", "purpose", "status", "latency_ms", "prompt_tokens",
          "completion_tokens", "total_tokens", "total_cost")})
 

@@ -19,7 +19,8 @@ class BoundMemoryWorkflows:
     def process_memory_job(self, *args, **kwargs):
         result = self.workflows.process_memory_job(*args, **kwargs)
         if result:
-            emit_event("memory.job", job_id=result.get("id"), job_state=result.get("status"))
+            emit_event("memory.job", job_id=result.get("id"), job_state=result.get("status"),
+                       session_id=result.get("conversation_id"), turn_id=result.get("id"))
         return result
     def process_conversation_summary(self, *args, **kwargs): return self.workflows.process_conversation_summary(*args, **kwargs)
     def generate_and_save_title(self, *args, **kwargs): return self.workflows.generate_and_save_title(*args, **kwargs)
