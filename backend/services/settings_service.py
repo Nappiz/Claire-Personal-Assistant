@@ -1,18 +1,8 @@
-from sqlalchemy.orm import Session
-from models.user_setting import UserSetting
+"""Compatibility functions; SQLAlchemy persistence belongs to the repository."""
+from app.infrastructure.persistence.settings import SQLAlchemySettingsRepository
 
-def get_setting(db: Session, key: str, default_value=None):
-    setting = db.query(UserSetting).filter(UserSetting.key == key).first()
-    if setting:
-        return setting.value
-    return default_value
+def get_setting(db, key: str, default_value=None):
+    return SQLAlchemySettingsRepository(db).get(key, default_value)
 
-def set_setting(db: Session, key: str, value):
-    setting = db.query(UserSetting).filter(UserSetting.key == key).first()
-    if setting:
-        setting.value = value
-    else:
-        setting = UserSetting(key=key, value=value)
-        db.add(setting)
-    db.commit()
-    return setting.value
+def set_setting(db, key: str, value):
+    return SQLAlchemySettingsRepository(db).set(key, value)
