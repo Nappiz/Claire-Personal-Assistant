@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+.chat-canvas {
+  isolation: isolate;
+}
+
+.chat-canvas::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.012) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.012) 1px, transparent 1px);
+  background-size: 42px 42px;
+  mask-image: linear-gradient(to bottom, rgba(0, 0, 0, 0.45), transparent 70%);
+  content: "";
+  pointer-events: none;
+}
+
+.streaming-skeleton {
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.streaming-skeleton::after {
+  display: block;
+  width: 45%;
+  height: 100%;
+  transform: translateX(-120%);
+  background: linear-gradient(90deg, transparent, rgba(165, 180, 252, 0.22), transparent);
+  animation: streaming-shimmer 1.65s ease-in-out infinite;
+  content: "";
+}
+
+.streaming-markdown > :last-child::after {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 4px;
+  transform: translateY(2px);
+  border-radius: 2px;
+  background: rgb(129, 140, 248);
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.55);
+  animation: streaming-caret 0.9s steps(2, start) infinite;
+  content: "";
+}
+
+.composer-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 24px;
+  background: rgba(24, 25, 31, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 18px 55px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(18px);
+  transition: border-color 250ms ease, box-shadow 250ms ease, background 250ms ease;
+}
+
+.composer-shell:focus-within {
+  border-color: rgba(129, 140, 248, 0.3);
+  background: rgba(27, 28, 35, 0.94);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.055),
+    0 20px 60px rgba(0, 0, 0, 0.46),
+    0 0 0 3px rgba(99, 102, 241, 0.055);
+}
+
+.composer-shell.is-streaming {
+  border-color: rgba(129, 140, 248, 0.2);
+}
+
+@keyframes streaming-shimmer {
+  100% { transform: translateX(330%); }
+}
+
+@keyframes streaming-caret {
+  50% { opacity: 0.15; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streaming-skeleton::after,
+  .streaming-markdown > :last-child::after {
+    animation: none;
+  }
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.knowledge-graph-surface {
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(49, 46, 129, 0.11), transparent 42%),
+    linear-gradient(180deg, rgba(8, 11, 19, 0.35), rgba(5, 7, 13, 0.72));
+}
+
+.knowledge-graph-surface::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.032) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(circle at center, black 10%, transparent 78%);
+  content: "";
+  pointer-events: none;
+}
+
+.knowledge-graph-surface::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: radial-gradient(circle at center, transparent 42%, rgba(2, 4, 9, 0.58) 100%);
+  content: "";
+  pointer-events: none;
+}
+
+.graph-control {
+  display: flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  background: rgba(13, 16, 25, 0.88);
+  color: rgb(148, 163, 184);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(16px);
+  transition: color 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.graph-control:hover {
+  border-color: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.08);
+  color: white;
+}
