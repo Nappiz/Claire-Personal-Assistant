@@ -1,0 +1,46 @@
+[
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/main.py",
+    "sha256": "E04E4A118DAFBA4F3D06921ACA4CEAA8E0E14369C23412F6D77D4FA52D01B2C2"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/models/message.py",
+    "sha256": "7DE0939E3C81AD6C6032D192886A58E0322265EFC55CBBEE22FA89A36B8EF30C"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/routes/chat_routes.py",
+    "sha256": "90D554316B7147591DDF716EF15ABB0B490E8C4A233AACB3BDC8C60A0274ECDB"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/schemas/chat_sch.py",
+    "sha256": "FF886196E83993DBE61B358479C760FDD3494B557B29F0C3BB17D289BB9DD41C"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/services/llm_service.py",
+    "sha256": "4ACD3E50218FC4E7D054E40B9368F4AF00EF3C4EC8D57A5B4562CADB2B7F2E8B"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/services/memory_policy.py",
+    "sha256": "01EBD6411257E71101CEB9F22D9BD57D35D64EEBA1F467465B47222B14AA8968"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/services/memory_service.py",
+    "sha256": "3C49DD26A3444F124010E93C47ACFCABA47C3634C5C8857EBF892DEDD6F29F1C"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/services/neo4j_service.py",
+    "sha256": "DE5E0E941B6B1A86AB34DE509853E3B0C62A798F3725ED6F939E03F1DE8FF175"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/services/qdrant_service.py",
+    "sha256": "25B36AD8AF6E7837BB2C3594199DF756FE5C71CF867A6CC31F93C7272CD2A06B"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/backend/services/web_search_service.py",
+    "sha256": "2329A1627B075054D0B0465E4C18A14C23F6C5620FC6582953EC5238DB1E16FB"
+  },
+  {
+    "path": "D:/Nafiz/Career/Project/personal-assistant/frontend/app/chat/page.tsx",
+    "sha256": "56E16889A875D72C83B122842E1D126D6553E2996EA5E7E980D07B47FC7B09DC"
+  }
+]
