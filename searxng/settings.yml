@@ -1,0 +1,55 @@
+use_default_settings:
+  engines:
+    keep_only:
+      - google
+
+general:
+  debug: false
+  instance_name: "Claire Web Search"
+  enable_metrics: false
+
+search:
+  safe_search: 1
+  autocomplete: ""
+  favicon_resolver: ""
+  image_proxy: false
+  default_lang: "id-ID"
+  max_page: 1
+  formats:
+    - json
+
+server:
+  bind_address: "0.0.0.0"
+  port: 8080
+  limiter: false
+  public_instance: false
+  image_proxy: false
+  method: "GET"
+
+ui:
+  query_in_title: false
+  results_on_new_tab: false
+  search_on_category_select: false
+
+preferences:
+  lock:
+    - autocomplete
+    - favicon_resolver
+    - image_proxy
+    - method
+    - safesearch
+
+outgoing:
+  request_timeout: 2.0
+  max_request_timeout: 2.0
+  useragent_suffix: ""
+  pool_connections: 20
+  enable_http2: true
+
+# The selected engine uses SearXNG's built-in rotating browser user agents.
+# Explicit per-engine timeouts prevent an engine override from exceeding 2s.
+engines:
+  - name: google
+    disabled: false
+    timeout: 2.0
+    retries: 0

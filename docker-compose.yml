@@ -1,0 +1,52 @@
+services:
+  neo4j:
+    image: neo4j:5.23.0-community
+    container_name: personia_neo4j
+    ports:
+      - "7474:7474"   # HTTP (Browser)
+      - "7687:7687"   # Bolt (Driver)
+    environment:
+      - NEO4J_AUTH=neo4j/personia_secret
+      - NEO4J_apoc_export_file_enabled=true
+      - NEO4J_apoc_import_file_enabled=true
+      - NEO4J_apoc_import_file_use__neo4j__config=true
+    volumes:
+      - ./backend/data/neo4j/data:/data
+      - ./backend/data/neo4j/logs:/logs
+      - ./backend/data/neo4j/import:/var/lib/neo4j/import
+      - ./backend/data/neo4j/plugins:/plugins
+    restart: unless-stopped
+
+  searxng:
+    image: searxng/searxng:2026.9.8-3fdc6d753
+    container_name: personia_searxng
+    ports:
+      - "127.0.0.1:8088:8080"
+    environment:
+      SEARXNG_BASE_URL: "http://127.0.0.1:8088/"
+      SEARXNG_SECRET: "${SEARXNG_SECRET:-claire-local-only-change-this-secret}"
+    volumes:
+      - ./searxng/settings.yml:/etc/searxng/settings.yml:ro
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: json-file
+      options:
+        max-size: "2m"
+        max-file: "2"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 384M
+          pids: 128
+        reservations:
+          cpus: "0.10"
+          memory: 128M
